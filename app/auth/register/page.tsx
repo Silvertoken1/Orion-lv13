@@ -144,13 +144,11 @@ const RegisterPage = () => {
 
       if (response.ok && result.success) {
         setMessage({ text: result.message, type: "success" })
-
         // Store user data for payment
         if (result.user) {
           localStorage.setItem("pending_user", JSON.stringify(result.user))
           localStorage.setItem("package_info", JSON.stringify(PACKAGE))
         }
-
         // Redirect to payment page
         setTimeout(() => {
           router.push("/payment")

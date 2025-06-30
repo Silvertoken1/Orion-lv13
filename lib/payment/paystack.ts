@@ -1,46 +1,37 @@
-// lib/payment/paystack.ts
-
-import axios from 'axios';
-
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
-
-if (!PAYSTACK_SECRET_KEY) {
-  throw new Error('PAYSTACK_SECRET_KEY is not set in environment variables.');
+export interface PaystackPaymentData {
+  email: string
+  amount: number
+  reference: string
+  callback_url: string
+  metadata: {
+    memberId: string
+    packageType: string
+    firstName: string
+    lastName: string
+  }
 }
 
-// Base config for Paystack
-const paystack = axios.create({
-  baseURL: 'https://api.paystack.co',
-  headers: {
-    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-    'Content-Type': 'application/json',
-  },
-});
+export async function initializePaystackPayment(data: PaystackPaymentData) {
+  const response = await fetch("https://api.paystack.co/transaction/initialize", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  })
 
-// Interface for initializing a transaction
-export interface InitializeTransactionPayload {
-  email: string;
-  amount: number; // in Naira (₦), will be converted to Kobo
-  callback_url?: string;
-  reference?: string;
-  metadata?: any;
+  const result = await response.json()
+  return result
 }
 
-// Initialize Paystack payment
-export async function initializePaystackPayment(payload: InitializeTransactionPayload) {
-  const response = await paystack.post('/transaction/initialize', {
-    email: payload.email,
-    amount: payload.amount * 100, // convert to Kobo
-    callback_url: payload.callback_url,
-    reference: payload.reference,
-    metadata: payload.metadata,
-  });
-
-  return response.data;
-}
-
-// Verify Paystack transaction
 export async function verifyPaystackPayment(reference: string) {
-  const response = await paystack.get(`/transaction/verify/${reference}`);
-  return response.data;
+  const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+    headers: {
+      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+    },
+  })
+
+  const result = await response.json()
+  return result
 }
