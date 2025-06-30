@@ -1,0 +1,68 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "memberId": "BO000001",
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "admin@brightorian.com",
+      "phone": "+2348000000000",
+      "passwordHash": "$2b$10$9j3v6RSk/PtNFJdDcNlS8uqFvsiS7.0NVwI5d24GYqte0EN33bMa6",
+      "status": "active",
+      "role": "admin",
+      "activationDate": "2025-06-16T20:27:16.890Z",
+      "totalEarnings": 0,
+      "availableBalance": 0,
+      "totalReferrals": 0,
+      "createdAt": "2025-06-16T20:27:16.890Z",
+      "updatedAt": "2025-06-16T20:27:16.890Z"
+    }
+  ],
+  "pins": [
+    {
+      "id": 1,
+      "pinCode": "PIN123456",
+      "status": "available",
+      "createdBy": 1,
+      "createdAt": "2025-06-16T20:27:16.890Z"
+    },
+    {
+      "id": 2,
+      "pinCode": "PIN123457",
+      "status": "available",
+      "createdBy": 1,
+      "createdAt": "2025-06-16T20:27:16.890Z"
+    },
+    {
+      "id": 3,
+      "pinCode": "PIN123458",
+      "status": "available",
+      "createdBy": 1,
+      "createdAt": "2025-06-16T20:27:16.890Z"
+    },
+    {
+      "id": 4,
+      "pinCode": "PIN123459",
+      "status": "available",
+      "createdBy": 1,
+      "createdAt": "2025-06-16T20:27:16.890Z"
+    },
+    {
+      "id": 5,
+      "pinCode": "PIN123460",
+      "status": "available",
+      "createdBy": 1,
+      "createdAt": "2025-06-16T20:27:16.890Z"
+    }
+  ],
+  "stockists": [],
+  "stockTransactions": [],
+  "commissions": [],
+  "payments": [],
+  "nextUserId": 2,
+  "nextPinId": 6,
+  "nextStockistId": 1,
+  "nextTransactionId": 1,
+  "nextCommissionId": 1,
+  "nextPaymentId": 1
+}
