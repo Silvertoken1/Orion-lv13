@@ -1,10 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createUser, getUserByEmail, getUserByMemberId, getPinByCode, usePin } from "@/lib/db"
+import { db, users, activationPins } from "@/lib/db"
 import { hashPassword } from "@/lib/auth"
 import { generateMemberId } from "@/lib/utils"
+import { eq, and } from "drizzle-orm"
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("📝 Registration started...")
+
     const body = await request.json()
     const { fullName, email, phone, password, sponsorId, uplineId, pin, location, pinMethod, packagePrice } = body
 
@@ -37,40 +40,46 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if email already exists
-    const existingUser = await getUserByEmail(email)
-    if (existingUser) {
+    const existingUser = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1)
+    if (existingUser.length > 0) {
       return NextResponse.json(
         {
           success: false,
-          message: "Email already registered",
+          message: "Email address is already registered",
         },
         { status: 400 },
       )
     }
 
     // Validate sponsor exists
-    const sponsor = await getUserByMemberId(sponsorId)
-    if (!sponsor) {
+    const sponsor = await db.select().from(users).where(eq(users.memberId, sponsorId.toUpperCase())).limit(1)
+    if (sponsor.length === 0) {
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid sponsor ID",
+          message: "Invalid sponsor ID. Please check and try again.",
         },
         { status: 400 },
       )
     }
 
     // Validate upline exists
-    const upline = await getUserByMemberId(uplineId)
-    if (!upline) {
+    const upline = await db.select().from(users).where(eq(users.memberId, uplineId.toUpperCase())).limit(1)
+    if (upline.length === 0) {
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid upline ID",
+          message: "Invalid upline ID. Please check and try again.",
         },
         { status: 400 },
       )
     }
+
+    // Generate member ID
+    const memberId = generateMemberId()
+
+    // Hash password
+    const passwordHash = await hashPassword(password)
 
     // Validate PIN if using existing PIN method
     let pinRecord = null
@@ -85,59 +94,88 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      pinRecord = await getPinByCode(pin)
-      if (!pinRecord || pinRecord.status !== "available") {
+      const pinResult = await db
+        .select()
+        .from(activationPins)
+        .where(and(eq(activationPins.pinCode, pin.toUpperCase()), eq(activationPins.status, "available")))
+        .limit(1)
+
+      if (pinResult.length === 0) {
         return NextResponse.json(
           {
             success: false,
-            message: "Invalid or already used PIN",
+            message: "Invalid or already used PIN. Please check and try again.",
           },
           { status: 400 },
         )
       }
+      pinRecord = pinResult[0]
     }
-
-    // Generate member ID
-    const memberId = generateMemberId()
-
-    // Hash password
-    const passwordHash = await hashPassword(password)
 
     // Create user based on PIN method
     let newUser
     if (pinMethod === "existing" && pinRecord) {
-      // Mark PIN as used
-      await usePin(pin, Number.parseInt(memberId.slice(2)))
+      // Mark PIN as used first
+      await db
+        .update(activationPins)
+        .set({
+          status: "used",
+          usedAt: new Date(),
+        })
+        .where(eq(activationPins.id, pinRecord.id))
 
-      newUser = await createUser({
-        memberId,
-        firstName,
-        lastName,
-        email,
-        phone,
-        passwordHash,
-        sponsorId: sponsor.memberId,
-        uplineId: upline.memberId,
-        location: location || undefined,
-        status: "active",
-        role: "user",
-        activationDate: new Date().toISOString(),
-      })
+      // Create active user
+      const userResult = await db
+        .insert(users)
+        .values({
+          memberId,
+          firstName,
+          lastName,
+          email: email.toLowerCase(),
+          phone,
+          passwordHash,
+          sponsorId: sponsor[0].memberId,
+          uplineId: upline[0].memberId,
+          location: location || null,
+          status: "active",
+          role: "user",
+          activationDate: new Date(),
+        })
+        .returning()
+
+      newUser = userResult[0]
+
+      // Update PIN with user ID
+      await db
+        .update(activationPins)
+        .set({
+          usedBy: newUser.id,
+        })
+        .where(eq(activationPins.id, pinRecord.id))
+
+      console.log("✅ User registered and activated:", newUser.email)
     } else {
-      newUser = await createUser({
-        memberId,
-        firstName,
-        lastName,
-        email,
-        phone,
-        passwordHash,
-        sponsorId: sponsor.memberId,
-        uplineId: upline.memberId,
-        location: location || undefined,
-        status: "pending",
-        role: "user",
-        activationDate: undefined,
-      })
+      // Create pending user
+      const userResult = await db
+        .insert(users)
+        .values({
+          memberId,
+          firstName,
+          lastName,
+          email: email.toLowerCase(),
+          phone,
+          passwordHash,
+          sponsorId: sponsor[0].memberId,
+          uplineId: upline[0].memberId,
+          location: location || null,
+          status: "pending",
+          role: "user",
+          activationDate: null,
+        })
+        .returning()
+
+      newUser = userResult[0]
+      console.log("✅ User registered (pending payment):", newUser.email)
     }
 
     // Return success with user data
@@ -145,8 +183,8 @@ export async function POST(request: NextRequest) {
       success: true,
       message:
         pinMethod === "existing"
-          ? "Registration successful! You can now login."
-          : "Registration successful! Please proceed to payment to receive your PIN.",
+          ? "Registration successful! Your account is now active. You can login immediately."
+          : "Registration successful! Please proceed to payment to activate your account and receive your PIN.",
       user: {
         id: newUser.id,
         memberId: newUser.memberId,
@@ -161,11 +199,11 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Registration error:", error)
+    console.error("❌ Registration error:", error)
     return NextResponse.json(
       {
         success: false,
-        message: "Internal server error",
+        message: "Registration is temporarily unavailable. Please try again in a few moments.",
       },
       { status: 500 },
     )
