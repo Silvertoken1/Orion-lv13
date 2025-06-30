@@ -1,11 +1,12 @@
-// database.ts
 import fs from "fs"
 import path from "path"
 import bcrypt from "bcryptjs"
 
 const DB_FILE = path.join(process.cwd(), "data", "database.json")
 
-interface User {
+// === Interface Definitions ===
+
+export interface User {
   id: number
   memberId: string
   firstName: string
@@ -26,7 +27,7 @@ interface User {
   updatedAt: string
 }
 
-interface Pin {
+export interface Pin {
   id: number
   pinCode: string
   status: "available" | "used" | "expired"
@@ -36,7 +37,7 @@ interface Pin {
   usedAt?: string
 }
 
-interface Stockist {
+export interface Stockist {
   id: number
   userId: number
   businessName: string
@@ -57,7 +58,7 @@ interface Stockist {
   updatedAt: string
 }
 
-interface StockTransaction {
+export interface StockTransaction {
   id: number
   stockistId: number
   type: "purchase" | "sale" | "return"
@@ -72,7 +73,7 @@ interface StockTransaction {
   createdAt: string
 }
 
-interface Commission {
+export interface Commission {
   id: number
   userId: number
   fromUserId: number
@@ -84,7 +85,7 @@ interface Commission {
   approvedAt?: string
 }
 
-interface Payment {
+export interface Payment {
   id: number
   userId: number
   amount: number
@@ -95,7 +96,7 @@ interface Payment {
   completedAt?: string
 }
 
-interface Database {
+export interface Database {
   users: User[]
   pins: Pin[]
   stockists: Stockist[]
@@ -109,6 +110,8 @@ interface Database {
   nextCommissionId: number
   nextPaymentId: number
 }
+
+// === Helper Functions ===
 
 function ensureDataDirectory() {
   const dataDir = path.dirname(DB_FILE)
@@ -125,21 +128,20 @@ function getDatabase(): Database {
       const data = fs.readFileSync(DB_FILE, "utf8")
       const db = JSON.parse(data)
 
-      if (!db.users) db.users = []
-      if (!db.pins) db.pins = []
-      if (!db.stockists) db.stockists = []
-      if (!db.stockTransactions) db.stockTransactions = []
-      if (!db.commissions) db.commissions = []
-      if (!db.payments) db.payments = []
-
-      if (!db.nextUserId) db.nextUserId = 1
-      if (!db.nextPinId) db.nextPinId = 1
-      if (!db.nextStockistId) db.nextStockistId = 1
-      if (!db.nextTransactionId) db.nextTransactionId = 1
-      if (!db.nextCommissionId) db.nextCommissionId = 1
-      if (!db.nextPaymentId) db.nextPaymentId = 1
-
-      return db
+      return {
+        users: db.users || [],
+        pins: db.pins || [],
+        stockists: db.stockists || [],
+        stockTransactions: db.stockTransactions || [],
+        commissions: db.commissions || [],
+        payments: db.payments || [],
+        nextUserId: db.nextUserId || 1,
+        nextPinId: db.nextPinId || 1,
+        nextStockistId: db.nextStockistId || 1,
+        nextTransactionId: db.nextTransactionId || 1,
+        nextCommissionId: db.nextCommissionId || 1,
+        nextPaymentId: db.nextPaymentId || 1,
+      }
     }
   } catch (error) {
     console.error("Error reading database:", error)
@@ -171,16 +173,9 @@ function saveDatabase(db: Database): void {
   }
 }
 
-// Utility export
-export { getDatabase, saveDatabase }
+// === Exports ===
 
-// Export types for use elsewhere
-export type {
-  User,
-  Pin,
-  Stockist,
-  StockTransaction,
-  Commission,
-  Payment,
-  Database
-} from './types'
+export {
+  getDatabase,
+  saveDatabase
+}

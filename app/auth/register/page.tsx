@@ -63,46 +63,57 @@ const RegisterPage = () => {
       setMessage({ text: "Full name is required.", type: "error" })
       return false
     }
+
     if (!formData.email.trim()) {
       setMessage({ text: "Email address is required.", type: "error" })
       return false
     }
+
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
       setMessage({ text: "Please enter a valid email address.", type: "error" })
       return false
     }
+
     if (!formData.phone.trim()) {
       setMessage({ text: "Phone number is required.", type: "error" })
       return false
     }
+
     if (!formData.password) {
       setMessage({ text: "Password is required.", type: "error" })
       return false
     }
+
     if (formData.password.length < 6) {
       setMessage({ text: "Password must be at least 6 characters.", type: "error" })
       return false
     }
+
     if (formData.password !== formData.confirmPassword) {
       setMessage({ text: "Passwords do not match.", type: "error" })
       return false
     }
+
     if (!formData.sponsorId.trim()) {
       setMessage({ text: "Sponsor ID is required.", type: "error" })
       return false
     }
+
     if (!formData.uplineId.trim()) {
       setMessage({ text: "Upline ID is required.", type: "error" })
       return false
     }
+
     if (!formData.agreeTerms) {
       setMessage({ text: "You must agree to the terms and conditions.", type: "error" })
       return false
     }
+
     if (pinMethod === "existing" && !formData.pin) {
       setMessage({ text: "Registration PIN is required.", type: "error" })
       return false
     }
+
     return true
   }
 
@@ -326,7 +337,6 @@ const RegisterPage = () => {
           {/* PIN Section */}
           <div className="space-y-3">
             <label className="block text-sm font-medium text-gray-700">Registration PIN *</label>
-
             <div className="flex space-x-4 mb-3">
               <button
                 type="button"
