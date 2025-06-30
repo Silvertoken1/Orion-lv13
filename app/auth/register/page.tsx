@@ -1,24 +1,31 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+
+import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import Link from "next/link"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, UserPlus, Key, Crown, CheckCircle } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { Eye, EyeOff, CreditCard, Users, CheckCircle, AlertCircle } from "lucide-react"
+import { toast } from "sonner"
+import Link from "next/link"
 
 export default function RegisterPage() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-  const [registrationMethod, setRegistrationMethod] = useState("referral")
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  // Get URL parameters
+  const urlSponsor = searchParams.get("sponsor")
+  const urlUpline = searchParams.get("upline")
+
+  const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [registrationMethod, setRegistrationMethod] = useState(urlSponsor && urlUpline ? "referral" : "pin")
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -28,53 +35,54 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
     location: "",
-    sponsorId: "MASTER001",
-    uplineId: "MASTER001",
+    sponsorId: urlSponsor || "",
+    uplineId: urlUpline || "",
     pinCode: "",
   })
 
-  // Pre-fill form from URL parameters
-  useEffect(() => {
-    const sponsor = searchParams.get("sponsor")
-    const upline = searchParams.get("upline")
-
-    if (sponsor || upline) {
-      setFormData((prev) => ({
-        ...prev,
-        sponsorId: sponsor || "MASTER001",
-        uplineId: upline || "MASTER001",
-      }))
-      setRegistrationMethod("referral")
-    }
-  }, [searchParams])
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    })
+    const { name, value } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
+  const validateForm = () => {
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.password) {
+      toast.error("Please fill in all required fields")
+      return false
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match")
+      return false
+    }
+
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters long")
+      return false
+    }
+
+    if (registrationMethod === "pin" && !formData.pinCode) {
+      toast.error("Please enter your PIN code")
+      return false
+    }
+
+    if (registrationMethod === "referral" && (!formData.sponsorId || !formData.uplineId)) {
+      toast.error("Please enter both Sponsor ID and Upline ID")
+      return false
+    }
+
+    return true
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    setError("")
-    setSuccess("")
 
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match")
-      setIsLoading(false)
-      return
-    }
+    if (!validateForm()) return
 
-    // Validate password strength
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters long")
-      setIsLoading(false)
-      return
-    }
-
+    setLoading(true)
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
@@ -90,315 +98,266 @@ export default function RegisterPage() {
       const data = await response.json()
 
       if (data.success) {
-        setSuccess("🎉 Registration successful! You can now login with your credentials.")
-        setTimeout(() => {
-          router.push("/auth/login")
-        }, 3000)
+        toast.success(data.message)
+        router.push("/auth/login?message=Registration successful! Please login.")
       } else {
-        setError(data.error || "Registration failed")
+        toast.error(data.error || "Registration failed")
       }
     } catch (error) {
-      setError("Network error. Please try again.")
+      console.error("Registration error:", error)
+      toast.error("Registration failed. Please try again.")
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-2xl">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center mb-4 shadow-lg">
-            <span className="text-white font-bold text-3xl">BO</span>
-          </div>
-          <CardTitle className="text-3xl font-bold text-gray-900">Join Bright Orion</CardTitle>
-          <CardDescription className="text-lg">
-            Create your account to start earning with our MLM platform
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Master Information Alert */}
-          <Alert className="mb-6 border-amber-200 bg-amber-50">
-            <Crown className="h-5 w-5 text-amber-600" />
-            <AlertDescription className="text-amber-800">
-              <div className="space-y-3">
-                <p className="font-semibold text-lg">🎯 Ready to Join? Use These Details!</p>
-                <div className="bg-white rounded-lg p-4 border border-amber-200">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <strong>✅ Sponsor ID:</strong>
-                        <span className="font-mono bg-green-100 px-2 py-1 rounded text-green-800">MASTER001</span>
+      <div className="w-full max-w-md">
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold">Join Bright Orion</CardTitle>
+            <CardDescription>Create your account and start earning today</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Registration Method Selection */}
+              <Tabs value={registrationMethod} onValueChange={setRegistrationMethod} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="pin" className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    PIN Registration
+                  </TabsTrigger>
+                  <TabsTrigger value="referral" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Referral Registration
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="pin" className="space-y-4 mt-4">
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CreditCard className="h-5 w-5 text-blue-600" />
+                      <h3 className="font-semibold text-blue-900">PIN Registration</h3>
+                    </div>
+                    <p className="text-sm text-blue-700">
+                      Use your activation PIN to register and get instant access to the system.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="pinCode">Activation PIN *</Label>
+                    <Input
+                      id="pinCode"
+                      name="pinCode"
+                      type="text"
+                      placeholder="Enter your PIN code"
+                      value={formData.pinCode}
+                      onChange={handleInputChange}
+                      className="uppercase"
+                      required={registrationMethod === "pin"}
+                    />
+                    <p className="text-xs text-muted-foreground">Enter the PIN code provided to you by the admin</p>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="referral" className="space-y-4 mt-4">
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="h-5 w-5 text-green-600" />
+                      <h3 className="font-semibold text-green-900">Referral Registration</h3>
+                    </div>
+                    <p className="text-sm text-green-700">
+                      Register using sponsor and upline information provided by your referrer.
+                    </p>
+                  </div>
+
+                  {urlSponsor && urlUpline && (
+                    <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium text-green-900">Pre-filled Information</span>
                       </div>
-                      <div className="flex justify-between">
-                        <strong>✅ Upline ID:</strong>
-                        <span className="font-mono bg-green-100 px-2 py-1 rounded text-green-800">MASTER001</span>
+                      <div className="text-xs text-green-700 space-y-1">
+                        <p>
+                          Sponsor ID: <Badge variant="secondary">{urlSponsor}</Badge>
+                        </p>
+                        <p>
+                          Upline ID: <Badge variant="secondary">{urlUpline}</Badge>
+                        </p>
                       </div>
                     </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <div>
-                        <strong>🔑 Available Master PINs:</strong>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {["MASTER2024", "BRIGHT001", "ORION123", "ADMIN999", "TEST1234"].map((pin) => (
-                          <span key={pin} className="font-mono bg-blue-100 px-2 py-1 rounded text-blue-800 text-xs">
-                            {pin}
-                          </span>
-                        ))}
-                      </div>
+                      <Label htmlFor="sponsorId">Sponsor ID *</Label>
+                      <Input
+                        id="sponsorId"
+                        name="sponsorId"
+                        type="text"
+                        placeholder="e.g., MASTER001"
+                        value={formData.sponsorId}
+                        onChange={handleInputChange}
+                        className="uppercase"
+                        required={registrationMethod === "referral"}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="uplineId">Upline ID *</Label>
+                      <Input
+                        id="uplineId"
+                        name="uplineId"
+                        type="text"
+                        placeholder="e.g., MASTER001"
+                        value={formData.uplineId}
+                        onChange={handleInputChange}
+                        className="uppercase"
+                        required={registrationMethod === "referral"}
+                      />
                     </div>
                   </div>
-                </div>
-                <p className="text-sm">
-                  💡 <strong>Quick Start:</strong> Use MASTER001 for both IDs and any PIN above for instant activation!
-                </p>
-              </div>
-            </AlertDescription>
-          </Alert>
+                </TabsContent>
+              </Tabs>
 
-          <Tabs value={registrationMethod} onValueChange={setRegistrationMethod} className="mb-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="referral" className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4" />
-                Referral Registration (Recommended)
-              </TabsTrigger>
-              <TabsTrigger value="pin" className="flex items-center gap-2">
-                <Key className="h-4 w-4" />
-                PIN Code Registration
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+              <Separator />
 
-          {error && (
-            <Alert className="mb-4 border-red-200 bg-red-50">
-              <AlertDescription className="text-red-800">{error}</AlertDescription>
-            </Alert>
-          )}
+              {/* Personal Information */}
+              <div className="space-y-4">
+                <h3 className="font-semibold">Personal Information</h3>
 
-          {success && (
-            <Alert className="mb-4 border-green-200 bg-green-50">
-              <AlertDescription className="text-green-800 flex items-center">
-                <CheckCircle className="h-4 w-4 mr-2" />
-                {success}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="firstName">First Name *</Label>
-                <Input
-                  id="firstName"
-                  name="firstName"
-                  type="text"
-                  required
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                  disabled={isLoading}
-                  placeholder="Enter your first name"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="lastName">Last Name *</Label>
-                <Input
-                  id="lastName"
-                  name="lastName"
-                  type="text"
-                  required
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                  disabled={isLoading}
-                  placeholder="Enter your last name"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={formData.email}
-                onChange={handleInputChange}
-                disabled={isLoading}
-                placeholder="Enter your email address"
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="phone">Phone Number *</Label>
-              <Input
-                id="phone"
-                name="phone"
-                type="tel"
-                required
-                value={formData.phone}
-                onChange={handleInputChange}
-                disabled={isLoading}
-                placeholder="+234..."
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="location">Location (Optional)</Label>
-              <Input
-                id="location"
-                name="location"
-                type="text"
-                value={formData.location}
-                onChange={handleInputChange}
-                disabled={isLoading}
-                placeholder="City, State"
-                className="mt-1"
-              />
-            </div>
-
-            <TabsContent value="referral" className="mt-0 space-y-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h4 className="font-semibold text-green-800 mb-3">✅ Referral Registration (Recommended)</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="sponsorId">Sponsor ID *</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name *</Label>
                     <Input
-                      id="sponsorId"
-                      name="sponsorId"
+                      id="firstName"
+                      name="firstName"
                       type="text"
-                      required={registrationMethod === "referral"}
-                      value={formData.sponsorId}
+                      placeholder="John"
+                      value={formData.firstName}
                       onChange={handleInputChange}
-                      disabled={isLoading}
-                      placeholder="MASTER001"
-                      className="mt-1 bg-white"
+                      required
                     />
-                    <p className="text-xs text-green-600 mt-1">✅ Pre-filled with MASTER001</p>
                   </div>
-                  <div>
-                    <Label htmlFor="uplineId">Upline ID *</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name *</Label>
                     <Input
-                      id="uplineId"
-                      name="uplineId"
+                      id="lastName"
+                      name="lastName"
                       type="text"
-                      required={registrationMethod === "referral"}
-                      value={formData.uplineId}
+                      placeholder="Doe"
+                      value={formData.lastName}
                       onChange={handleInputChange}
-                      disabled={isLoading}
-                      placeholder="MASTER001"
-                      className="mt-1 bg-white"
+                      required
                     />
-                    <p className="text-xs text-green-600 mt-1">✅ Pre-filled with MASTER001</p>
                   </div>
                 </div>
-                <p className="text-sm text-green-700 mt-3">
-                  💡 <strong>Perfect!</strong> You're all set with the master sponsor. Just fill in your personal
-                  details above and register!
-                </p>
-              </div>
-            </TabsContent>
 
-            <TabsContent value="pin" className="mt-0">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-semibold text-blue-800 mb-3">🔑 PIN Code Registration</h4>
-                <div>
-                  <Label htmlFor="pinCode">Activation PIN Code *</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address *</Label>
                   <Input
-                    id="pinCode"
-                    name="pinCode"
-                    type="text"
-                    required={registrationMethod === "pin"}
-                    value={formData.pinCode}
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="john@example.com"
+                    value={formData.email}
                     onChange={handleInputChange}
-                    disabled={isLoading}
-                    placeholder="Enter your PIN code (e.g., MASTER2024)"
-                    className="mt-1 bg-white"
+                    required
                   />
-                  <p className="text-xs text-blue-600 mt-1">
-                    💡 Use any of the master PINs: MASTER2024, BRIGHT001, ORION123, ADMIN999, TEST1234
-                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number *</Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    placeholder="+234 800 000 0000"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location (Optional)</Label>
+                  <Input
+                    id="location"
+                    name="location"
+                    type="text"
+                    placeholder="Lagos, Nigeria"
+                    value={formData.location}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password *</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your password"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    required
+                  />
                 </div>
               </div>
-            </TabsContent>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="password">Password *</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  disabled={isLoading}
-                  minLength={6}
-                  placeholder="Create a strong password"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="confirmPassword">Confirm Password *</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  disabled={isLoading}
-                  minLength={6}
-                  placeholder="Confirm your password"
-                  className="mt-1"
-                />
-              </div>
-            </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Creating Account..." : "Create Account"}
+              </Button>
+            </form>
 
-            <Button type="submit" className="w-full bg-[#0066E0] hover:bg-[#00266C] h-12 text-lg" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Creating Your Account...
-                </>
-              ) : (
-                "🚀 Create Account - Join Bright Orion"
-              )}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{" "}
-              <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-500">
-                Sign in here
-              </Link>
-            </p>
-          </div>
-
-          {/* Help Section */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
-            <h4 className="font-semibold text-gray-800 mb-2">🆘 Need Help Getting Started?</h4>
-            <div className="text-sm text-gray-600 space-y-1">
-              <p>
-                • <strong>Don't have Sponsor/Upline IDs?</strong> Contact admin to get your referral information
-              </p>
-              <p>
-                • <strong>Want to use PIN?</strong> Ask admin for an activation PIN code
-              </p>
-              <p>
-                • <strong>Quick Start:</strong> Use MASTER001 for both Sponsor and Upline IDs
-              </p>
-              <p>
-                • <strong>Questions?</strong> Contact support at admin@brightorion.com
+            <div className="mt-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <Link href="/auth/login" className="text-primary hover:underline">
+                  Sign in
+                </Link>
               </p>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+
+            {/* Help Section */}
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+                <h4 className="font-semibold text-sm">Need Help?</h4>
+              </div>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>• Contact admin for PIN codes or referral information</p>
+                <p>• Use MASTER001 as default Sponsor/Upline if unsure</p>
+                <p>• Ensure all information is accurate before submitting</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

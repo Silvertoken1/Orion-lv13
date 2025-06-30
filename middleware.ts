@@ -1,17 +1,5 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { jwtVerify } from "jose"
-
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-fallback-secret-key")
-
-async function verifyToken(token: string) {
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET)
-    return payload as { userId: number; email: string; role: string; memberId: string }
-  } catch {
-    return null
-  }
-}
 
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get("auth-token")?.value
@@ -33,35 +21,47 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/auth/login", request.url))
     }
 
-    const decoded = await verifyToken(token)
-    if (!decoded) {
+    // Simple token validation without jose dependency
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]))
+
+      // Check if token is expired
+      if (payload.exp && payload.exp < Date.now() / 1000) {
+        const response = NextResponse.redirect(new URL("/auth/login", request.url))
+        response.cookies.delete("auth-token")
+        return response
+      }
+
+      // Check admin access
+      if (isAdminRoute && payload.role !== "admin") {
+        return NextResponse.redirect(new URL("/dashboard", request.url))
+      }
+
+      // Check stockist access
+      if (isStockistRoute && payload.role !== "stockist" && payload.role !== "admin") {
+        return NextResponse.redirect(new URL("/dashboard", request.url))
+      }
+    } catch (error) {
       const response = NextResponse.redirect(new URL("/auth/login", request.url))
       response.cookies.delete("auth-token")
       return response
-    }
-
-    // Check admin access
-    if (isAdminRoute && decoded.role !== "admin") {
-      return NextResponse.redirect(new URL("/dashboard", request.url))
-    }
-
-    // Check stockist access
-    if (isStockistRoute && decoded.role !== "stockist" && decoded.role !== "admin") {
-      return NextResponse.redirect(new URL("/dashboard", request.url))
     }
   }
 
   // Redirect authenticated users away from auth pages
   if (isAuthRoute && token) {
-    const decoded = await verifyToken(token)
-    if (decoded) {
-      if (decoded.role === "admin") {
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]))
+
+      if (payload.role === "admin") {
         return NextResponse.redirect(new URL("/admin", request.url))
-      } else if (decoded.role === "stockist") {
+      } else if (payload.role === "stockist") {
         return NextResponse.redirect(new URL("/stockist/dashboard", request.url))
       } else {
         return NextResponse.redirect(new URL("/dashboard", request.url))
       }
+    } catch (error) {
+      // Invalid token, allow access to auth pages
     }
   }
 

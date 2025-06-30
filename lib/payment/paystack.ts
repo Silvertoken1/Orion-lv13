@@ -149,3 +149,18 @@ export class PaystackService {
 }
 
 export const paystackService = new PaystackService()
+
+// Export individual functions for backward compatibility
+export async function initializePaystackPayment(data: {
+  email: string
+  amount: number
+  reference: string
+  callback_url?: string
+  metadata?: any
+}): Promise<PaystackInitializeResponse> {
+  return paystackService.initializeTransaction(data)
+}
+
+export async function verifyPaystackPayment(reference: string): Promise<PaystackVerifyResponse> {
+  return paystackService.verifyTransaction(reference)
+}
