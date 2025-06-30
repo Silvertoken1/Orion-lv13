@@ -1,43 +1,30 @@
-import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken"
-import type { NextRequest } from "next/server"
+// lib/auth.ts
+import { SignJWT, jwtVerify } from 'jose';
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production"
+const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
 
-export interface JWTPayload {
-  userId: number
-  email: string
-  role: string
-  memberId: string
+export interface TokenPayload {
+  userId: string;
+  email: string;
+  role: "admin" | "user";
 }
 
-export async function hashPassword(password: string): Promise<string> {
-  const saltRounds = 12
-  return await bcrypt.hash(password, saltRounds)
+export async function generateToken(payload: TokenPayload): Promise<string> {
+  return await new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('7d')
+    .sign(secret);
 }
 
-export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return await bcrypt.compare(password, hashedPassword)
-}
-
-export function generateToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" })
-}
-
-export function verifyToken(token: string): JWTPayload | null {
+export async function verifyToken(token: string): Promise<TokenPayload | null> {
   try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload
-  } catch (error) {
-    return null
+    const { payload } = await jwtVerify(token, secret);
+    return payload as TokenPayload;
+  } catch {
+    return null;
   }
 }
 
-export async function verifyTokenFromRequest(request: NextRequest): Promise<JWTPayload | null> {
-  try {
-    const token = request.cookies.get("auth-token")?.value
-    if (!token) return null
-    return verifyToken(token)
-  } catch (error) {
-    return null
-  }
-}
+// Keep your existing getTokenFromRequest and other functions
+// Just update any jwt.verify() calls to use verifyToken() instead
