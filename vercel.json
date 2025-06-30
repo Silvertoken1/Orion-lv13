@@ -1,25 +1,8 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "framework": "nextjs",
-  "functions": {
-    "app/api/**/*.ts": {
-      "maxDuration": 30
-    }
-  },
+  "version": 2,
   "env": {
-    "JWT_SECRET": "4488da1af6fe5c27d76ce5644f13b9fe72145efb17892ca6beacdbb22195a0aceca66c9a7166b978cff8f1db72bc48fc533bf646012a312b7d0831a67fc70999"
-,
-    "ADMIN_EMAIL": "@admin_email",
-    "ADMIN_PASSWORD": "@admin_password",
-    "ADMIN_PHONE": "@admin_phone",
-    "SMTP_HOST": "@smtp_host",
-    "SMTP_PORT": "@smtp_port",
-    "SMTP_USER": "@smtp_user",
-    "SMTP_PASS": "@smtp_pass",
-    "FROM_EMAIL": "@from_email",
-    "PAYSTACK_PUBLIC_KEY": "@paystack_public_key",
-    "PAYSTACK_SECRET_KEY": "@paystack_secret_key",
-    "NEXT_PUBLIC_APP_URL": "@next_public_app_url"
+    "ADMIN_EMAIL": "admin@brightorian.com",
+    "ADMIN_PASSWORD": "admin123"
   }
 }
+
