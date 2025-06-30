@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Copy, Mail, MessageCircle, Users, UserPlus, Link2 } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Users, LinkIcon, Copy, Mail, MessageCircle, CheckCircle, AlertCircle, Crown, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 
 interface User {
@@ -18,57 +18,50 @@ interface User {
   firstName: string
   lastName: string
   email: string
-  totalReferrals: number
   status: string
-  createdAt: string
+  role: string
 }
 
-interface ReferralInfo {
-  sponsorId: string
-  uplineId: string
-  sponsorName: string
-  uplineName: string
-  registrationUrl: string
-  message: string
-  createdAt: string
-  createdBy: string
+interface ReferralData {
+  users: User[]
+  masterInfo: {
+    sponsorId: string
+    uplineId: string
+    note: string
+  }
 }
 
-export default function ReferralsPage() {
-  const [users, setUsers] = useState<User[]>([])
+export default function ReferralManagementPage() {
+  const [loading, setLoading] = useState(false)
+  const [referralData, setReferralData] = useState<ReferralData | null>(null)
   const [selectedSponsor, setSelectedSponsor] = useState("")
   const [selectedUpline, setSelectedUpline] = useState("")
-  const [customMessage, setCustomMessage] = useState("")
-  const [referralInfo, setReferralInfo] = useState<ReferralInfo | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [fetchingUsers, setFetchingUsers] = useState(true)
+  const [generatedLink, setGeneratedLink] = useState("")
+  const [registrationDetails, setRegistrationDetails] = useState<any>(null)
 
   useEffect(() => {
-    fetchUsers()
+    fetchReferralData()
   }, [])
 
-  const fetchUsers = async () => {
+  const fetchReferralData = async () => {
     try {
       const response = await fetch("/api/admin/referral-info")
-      if (response.ok) {
-        const data = await response.json()
-        setUsers(data.data.activeUsers || [])
+      const data = await response.json()
 
-        // Set default to master account
-        if (data.data.masterAccount) {
-          setSelectedSponsor(data.data.masterAccount.memberId)
-          setSelectedUpline(data.data.masterAccount.memberId)
-        }
+      if (data.success) {
+        setReferralData(data.data)
+        // Set master as default
+        setSelectedSponsor(data.data.masterInfo.sponsorId)
+        setSelectedUpline(data.data.masterInfo.uplineId)
+      } else {
+        toast.error("Failed to load referral data")
       }
     } catch (error) {
-      console.error("Error fetching users:", error)
-      toast.error("Failed to fetch users")
-    } finally {
-      setFetchingUsers(false)
+      toast.error("Error loading referral data")
     }
   }
 
-  const generateReferralInfo = async () => {
+  const generateReferralLink = async () => {
     if (!selectedSponsor || !selectedUpline) {
       toast.error("Please select both sponsor and upline")
       return
@@ -84,21 +77,20 @@ export default function ReferralsPage() {
         body: JSON.stringify({
           sponsorId: selectedSponsor,
           uplineId: selectedUpline,
-          customMessage,
         }),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setReferralInfo(data.referralInfo)
-        toast.success("Referral information generated successfully!")
+      const data = await response.json()
+
+      if (data.success) {
+        setGeneratedLink(data.data.referralLink)
+        setRegistrationDetails(data.data)
+        toast.success("Referral link generated successfully!")
       } else {
-        const error = await response.json()
-        toast.error(error.error || "Failed to generate referral information")
+        toast.error(data.error || "Failed to generate referral link")
       }
     } catch (error) {
-      console.error("Error generating referral info:", error)
-      toast.error("Failed to generate referral information")
+      toast.error("Error generating referral link")
     } finally {
       setLoading(false)
     }
@@ -110,55 +102,76 @@ export default function ReferralsPage() {
   }
 
   const shareViaEmail = () => {
-    if (!referralInfo) return
+    if (!registrationDetails) return
 
     const subject = "Join Bright Orion MLM - Registration Information"
-    const body = `Hi there!
+    const body = `Hello!
 
-You've been invited to join Bright Orion MLM. Here are your registration details:
+You've been invited to join Bright Orion MLM platform. Here are your registration details:
 
-Sponsor ID: ${referralInfo.sponsorId}
-Upline ID: ${referralInfo.uplineId}
+🎯 REGISTRATION INFORMATION:
+• Sponsor ID: ${registrationDetails.sponsorInfo.memberId}
+• Upline ID: ${registrationDetails.uplineInfo.memberId}
+• Sponsor: ${registrationDetails.sponsorInfo.name}
+• Upline: ${registrationDetails.uplineInfo.name}
 
-Registration Link: ${referralInfo.registrationUrl}
+🚀 QUICK REGISTRATION:
+Click this link to register with pre-filled information:
+${registrationDetails.referralLink}
 
-${referralInfo.message}
+📋 MANUAL REGISTRATION:
+If the link doesn't work, visit our registration page and use:
+• Sponsor ID: ${registrationDetails.sponsorInfo.memberId}
+• Upline ID: ${registrationDetails.uplineInfo.memberId}
+
+💡 INSTRUCTIONS:
+1. Click the registration link above
+2. Fill in your personal information
+3. Your sponsor and upline information is already filled
+4. Complete registration and start earning!
+
+Welcome to Bright Orion!
 
 Best regards,
-Bright Orion Team`
+Bright Orion Admin Team`
 
-    window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`)
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    window.open(mailtoLink)
   }
 
   const shareViaWhatsApp = () => {
-    if (!referralInfo) return
+    if (!registrationDetails) return
 
-    const message = `🌟 *Join Bright Orion MLM* 🌟
+    const message = `🎉 *Join Bright Orion MLM Platform!*
 
-You've been invited to join our network!
+You've been invited to join our MLM platform. Here are your registration details:
 
-📋 *Registration Details:*
-• Sponsor ID: *${referralInfo.sponsorId}*
-• Upline ID: *${referralInfo.uplineId}*
+🎯 *REGISTRATION INFO:*
+• *Sponsor ID:* ${registrationDetails.sponsorInfo.memberId}
+• *Upline ID:* ${registrationDetails.uplineInfo.memberId}
+• *Sponsor:* ${registrationDetails.sponsorInfo.name}
 
-🔗 *Direct Registration Link:*
-${referralInfo.registrationUrl}
+🚀 *QUICK REGISTRATION:*
+${registrationDetails.referralLink}
 
-${referralInfo.message}
+💡 *INSTRUCTIONS:*
+1. Click the link above
+2. Fill your personal details
+3. Complete registration
+4. Start earning immediately!
 
-Join us today and start earning! 💰`
+Welcome to Bright Orion! 🌟`
 
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`)
+    const whatsappLink = `https://wa.me/?text=${encodeURIComponent(message)}`
+    window.open(whatsappLink, "_blank")
   }
 
-  if (fetchingUsers) {
+  if (!referralData) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading users...</p>
-          </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Loading referral management...</p>
         </div>
       </div>
     )
@@ -166,41 +179,66 @@ Join us today and start earning! 💰`
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3 mb-6">
+        <Users className="h-8 w-8 text-primary" />
         <div>
           <h1 className="text-3xl font-bold">Referral Management</h1>
-          <p className="text-muted-foreground">Generate referral information for new users</p>
+          <p className="text-muted-foreground">Create referral links and manage user onboarding</p>
         </div>
-        <Badge variant="secondary" className="flex items-center gap-2">
-          <Users className="h-4 w-4" />
-          {users.length} Active Users
-        </Badge>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Generate Referral Info */}
+      {/* Master Information Alert */}
+      <Alert className="border-amber-200 bg-amber-50">
+        <Crown className="h-5 w-5 text-amber-600" />
+        <AlertDescription className="text-amber-800">
+          <div className="space-y-2">
+            <p className="font-semibold">🎯 Master Sponsor Information</p>
+            <div className="bg-white rounded-lg p-3 border border-amber-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div>
+                  <strong>Master Sponsor ID:</strong>
+                  <Badge variant="secondary" className="ml-2">
+                    {referralData.masterInfo.sponsorId}
+                  </Badge>
+                </div>
+                <div>
+                  <strong>Master Upline ID:</strong>
+                  <Badge variant="secondary" className="ml-2">
+                    {referralData.masterInfo.uplineId}
+                  </Badge>
+                </div>
+              </div>
+              <p className="text-xs mt-2 text-amber-700">{referralData.masterInfo.note}</p>
+            </div>
+          </div>
+        </AlertDescription>
+      </Alert>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Referral Link Generator */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
-              Generate Referral Information
+              <LinkIcon className="h-5 w-5" />
+              Generate Referral Link
             </CardTitle>
-            <CardDescription>Create sponsor and upline information for new user registration</CardDescription>
+            <CardDescription>Create personalized registration links for new users</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="sponsor">Sponsor</Label>
+              <Label htmlFor="sponsor">Select Sponsor</Label>
               <Select value={selectedSponsor} onValueChange={setSelectedSponsor}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select sponsor" />
+                  <SelectValue placeholder="Choose sponsor" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.map((user) => (
+                  <SelectItem value={referralData.masterInfo.sponsorId}>
+                    🏆 {referralData.masterInfo.sponsorId} (Master Sponsor)
+                  </SelectItem>
+                  {referralData.users.map((user) => (
                     <SelectItem key={user.id} value={user.memberId}>
                       {user.memberId} - {user.firstName} {user.lastName}
-                      <Badge variant="outline" className="ml-2">
-                        {user.totalReferrals} refs
-                      </Badge>
+                      {user.role === "admin" && " (Admin)"}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -208,157 +246,141 @@ Join us today and start earning! 💰`
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="upline">Upline</Label>
+              <Label htmlFor="upline">Select Upline</Label>
               <Select value={selectedUpline} onValueChange={setSelectedUpline}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select upline" />
+                  <SelectValue placeholder="Choose upline" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.map((user) => (
+                  <SelectItem value={referralData.masterInfo.uplineId}>
+                    🏆 {referralData.masterInfo.uplineId} (Master Upline)
+                  </SelectItem>
+                  {referralData.users.map((user) => (
                     <SelectItem key={user.id} value={user.memberId}>
                       {user.memberId} - {user.firstName} {user.lastName}
-                      <Badge variant="outline" className="ml-2">
-                        {user.totalReferrals} refs
-                      </Badge>
+                      {user.role === "admin" && " (Admin)"}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="message">Custom Message (Optional)</Label>
-              <Textarea
-                id="message"
-                placeholder="Add a custom message for the new user..."
-                value={customMessage}
-                onChange={(e) => setCustomMessage(e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            <Button
-              onClick={generateReferralInfo}
-              disabled={loading || !selectedSponsor || !selectedUpline}
-              className="w-full"
-            >
-              {loading ? "Generating..." : "Generate Referral Info"}
+            <Button onClick={generateReferralLink} disabled={loading} className="w-full">
+              {loading ? "Generating..." : "Generate Referral Link"}
             </Button>
           </CardContent>
         </Card>
 
-        {/* Generated Referral Info */}
-        {referralInfo && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Link2 className="h-5 w-5" />
-                Generated Referral Information
-              </CardTitle>
-              <CardDescription>Share this information with the new user</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <div>
-                    <Label className="text-sm font-medium">Sponsor ID</Label>
-                    <p className="font-mono text-lg">{referralInfo.sponsorId}</p>
-                    <p className="text-sm text-muted-foreground">{referralInfo.sponsorName}</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copyToClipboard(referralInfo.sponsorId, "Sponsor ID")}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <div>
-                    <Label className="text-sm font-medium">Upline ID</Label>
-                    <p className="font-mono text-lg">{referralInfo.uplineId}</p>
-                    <p className="text-sm text-muted-foreground">{referralInfo.uplineName}</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copyToClipboard(referralInfo.uplineId, "Upline ID")}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-
+        {/* Generated Link Display */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" />
+              Generated Referral Information
+            </CardTitle>
+            <CardDescription>Share this information with new users</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {generatedLink ? (
+              <>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Registration Link</Label>
-                  <div className="flex items-center gap-2">
-                    <Input value={referralInfo.registrationUrl} readOnly className="font-mono text-sm" />
+                  <Label>Registration Link</Label>
+                  <div className="flex gap-2">
+                    <Input value={generatedLink} readOnly className="font-mono text-xs" />
                     <Button
-                      variant="outline"
                       size="sm"
-                      onClick={() => copyToClipboard(referralInfo.registrationUrl, "Registration Link")}
+                      variant="outline"
+                      onClick={() => copyToClipboard(generatedLink, "Registration link")}
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
+                    <Button size="sm" variant="outline" onClick={() => window.open(generatedLink, "_blank")}>
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-              </div>
 
-              <Separator />
+                {registrationDetails && (
+                  <>
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">SPONSOR INFO</Label>
+                        <div className="mt-1">
+                          <p className="font-semibold">{registrationDetails.sponsorInfo.memberId}</p>
+                          <p className="text-muted-foreground">{registrationDetails.sponsorInfo.name}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">UPLINE INFO</Label>
+                        <div className="mt-1">
+                          <p className="font-semibold">{registrationDetails.uplineInfo.memberId}</p>
+                          <p className="text-muted-foreground">{registrationDetails.uplineInfo.name}</p>
+                        </div>
+                      </div>
+                    </div>
 
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Share Options</Label>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={shareViaEmail} className="flex-1 bg-transparent">
-                    <Mail className="h-4 w-4 mr-2" />
-                    Email
-                  </Button>
-                  <Button variant="outline" onClick={shareViaWhatsApp} className="flex-1 bg-transparent">
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    WhatsApp
-                  </Button>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    copyToClipboard(
-                      `Sponsor ID: ${referralInfo.sponsorId}\nUpline ID: ${referralInfo.uplineId}\nRegistration Link: ${referralInfo.registrationUrl}`,
-                      "All Information",
-                    )
-                  }
-                  className="w-full"
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copy All Information
-                </Button>
+                    <Separator />
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={shareViaEmail} className="flex-1 bg-transparent">
+                        <Mail className="h-4 w-4 mr-2" />
+                        Email
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={shareViaWhatsApp} className="flex-1 bg-transparent">
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        WhatsApp
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          copyToClipboard(
+                            `Sponsor ID: ${registrationDetails.sponsorInfo.memberId}\nUpline ID: ${registrationDetails.uplineInfo.memberId}\nLink: ${generatedLink}`,
+                            "All details",
+                          )
+                        }
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Generate a referral link to see the details here</p>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Quick Instructions */}
+      {/* Instructions Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Instructions for New Users</CardTitle>
+          <CardTitle>📋 How to Use Referral Management</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2 text-sm">
-            <p>
-              <strong>Step 1:</strong> Visit the registration page using the provided link
-            </p>
-            <p>
-              <strong>Step 2:</strong> Choose "Referral Registration" option
-            </p>
-            <p>
-              <strong>Step 3:</strong> Enter the provided Sponsor ID and Upline ID
-            </p>
-            <p>
-              <strong>Step 4:</strong> Complete personal information and submit
-            </p>
-            <p>
-              <strong>Step 5:</strong> Account will be activated immediately for earning
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-semibold mb-3">🎯 For Quick Registration:</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>• Use MASTER001 as both Sponsor and Upline ID</li>
+                <li>• Generate the referral link</li>
+                <li>• Share the link with new users</li>
+                <li>• Users register instantly with pre-filled information</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-3">📤 Sharing Options:</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>• Email: Sends formatted registration details</li>
+                <li>• WhatsApp: Shares mobile-friendly message</li>
+                <li>• Copy: Copies all details to clipboard</li>
+                <li>• Direct Link: Opens registration page</li>
+              </ul>
+            </div>
           </div>
         </CardContent>
       </Card>

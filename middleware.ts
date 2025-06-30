@@ -1,73 +1,90 @@
 import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import type { NextRequest } from "next/request"
+
+// Simple JWT verification without jose dependency
+function verifyToken(token: string): any {
+  try {
+    // Simple base64 decode for development - replace with proper JWT verification in production
+    const payload = token.split(".")[1]
+    if (!payload) return null
+
+    const decoded = JSON.parse(atob(payload))
+
+    // Check if token is expired
+    if (decoded.exp && decoded.exp < Date.now() / 1000) {
+      return null
+    }
+
+    return decoded
+  } catch (error) {
+    return null
+  }
+}
 
 export async function middleware(request: NextRequest) {
-  const token = request.cookies.get("auth-token")?.value
+  const { pathname } = request.nextUrl
 
-  // Protected routes
-  const protectedRoutes = ["/dashboard", "/admin", "/profile", "/stockist/dashboard"]
-  const adminRoutes = ["/admin"]
-  const authRoutes = ["/auth/login", "/auth/register"]
-  const stockistRoutes = ["/stockist/dashboard"]
+  // Public routes that don't require authentication
+  const publicRoutes = [
+    "/",
+    "/auth/login",
+    "/auth/register",
+    "/about",
+    "/contact",
+    "/shop",
+    "/locations",
+    "/team",
+    "/api/auth/login",
+    "/api/auth/register",
+    "/api/init",
+    "/api/payment/verify",
+    "/setup",
+  ]
 
-  const isProtectedRoute = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
-  const isAdminRoute = adminRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
-  const isAuthRoute = authRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
-  const isStockistRoute = stockistRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
+  // Check if the current path is public
+  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route))
 
-  // Handle protected routes
-  if (isProtectedRoute) {
-    if (!token) {
-      return NextResponse.redirect(new URL("/auth/login", request.url))
-    }
-
-    // Simple token validation without jose dependency
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]))
-
-      // Check if token is expired
-      if (payload.exp && payload.exp < Date.now() / 1000) {
-        const response = NextResponse.redirect(new URL("/auth/login", request.url))
-        response.cookies.delete("auth-token")
-        return response
-      }
-
-      // Check admin access
-      if (isAdminRoute && payload.role !== "admin") {
-        return NextResponse.redirect(new URL("/dashboard", request.url))
-      }
-
-      // Check stockist access
-      if (isStockistRoute && payload.role !== "stockist" && payload.role !== "admin") {
-        return NextResponse.redirect(new URL("/dashboard", request.url))
-      }
-    } catch (error) {
-      const response = NextResponse.redirect(new URL("/auth/login", request.url))
-      response.cookies.delete("auth-token")
-      return response
-    }
+  if (isPublicRoute) {
+    return NextResponse.next()
   }
 
-  // Redirect authenticated users away from auth pages
-  if (isAuthRoute && token) {
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]))
+  // Get token from cookies
+  const token = request.cookies.get("auth-token")?.value
 
-      if (payload.role === "admin") {
-        return NextResponse.redirect(new URL("/admin", request.url))
-      } else if (payload.role === "stockist") {
-        return NextResponse.redirect(new URL("/stockist/dashboard", request.url))
-      } else {
-        return NextResponse.redirect(new URL("/dashboard", request.url))
-      }
-    } catch (error) {
-      // Invalid token, allow access to auth pages
-    }
+  if (!token) {
+    return NextResponse.redirect(new URL("/auth/login", request.url))
+  }
+
+  // Verify token
+  const payload = verifyToken(token)
+  if (!payload) {
+    const response = NextResponse.redirect(new URL("/auth/login", request.url))
+    response.cookies.delete("auth-token")
+    return response
+  }
+
+  // Check admin routes
+  if (pathname.startsWith("/admin") && payload.role !== "admin") {
+    return NextResponse.redirect(new URL("/dashboard", request.url))
+  }
+
+  // Check stockist routes
+  if (pathname.startsWith("/stockist") && payload.role !== "stockist") {
+    return NextResponse.redirect(new URL("/dashboard", request.url))
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|public).*)"],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    "/((?!_next/static|_next/image|favicon.ico|public|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$).*)",
+  ],
 }

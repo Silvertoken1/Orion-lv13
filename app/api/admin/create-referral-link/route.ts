@@ -1,59 +1,85 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { db, users } from "@/lib/db"
-import { verifyToken } from "@/lib/auth"
 import { eq } from "drizzle-orm"
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.cookies.get("token")?.value
-    if (!token) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+    const { sponsorId, uplineId } = await request.json()
+
+    if (!sponsorId || !uplineId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Sponsor ID and Upline ID are required",
+        },
+        { status: 400 },
+      )
     }
 
-    const decoded = await verifyToken(token)
-    if (!decoded) {
-      return NextResponse.json({ success: false, error: "Invalid token" }, { status: 401 })
-    }
-
-    // Get user details
-    const user = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1)
-    if (user.length === 0 || user[0].role !== "admin") {
-      return NextResponse.json({ success: false, error: "Admin access required" }, { status: 403 })
-    }
-
-    const body = await request.json()
-    const { sponsorId, uplineId, customMessage } = body
-
-    // Validate sponsor exists
+    // Verify sponsor exists
     const sponsor = await db.select().from(users).where(eq(users.memberId, sponsorId)).limit(1)
+
     if (sponsor.length === 0) {
-      return NextResponse.json({ success: false, error: "Invalid sponsor ID" }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Sponsor not found",
+        },
+        { status: 404 },
+      )
     }
 
-    // Validate upline exists
+    // Verify upline exists
     const upline = await db.select().from(users).where(eq(users.memberId, uplineId)).limit(1)
+
     if (upline.length === 0) {
-      return NextResponse.json({ success: false, error: "Invalid upline ID" }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Upline not found",
+        },
+        { status: 404 },
+      )
     }
 
-    // Create referral information
-    const referralInfo = {
-      sponsorId,
-      uplineId,
-      sponsorName: `${sponsor[0].firstName} ${sponsor[0].lastName}`,
-      uplineName: `${upline[0].firstName} ${upline[0].lastName}`,
-      registrationUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/register?sponsor=${sponsorId}&upline=${uplineId}`,
-      message: customMessage || `Join Bright Orion MLM! Use Sponsor ID: ${sponsorId} and Upline ID: ${uplineId}`,
-      createdAt: new Date().toISOString(),
-      createdBy: user[0].memberId,
-    }
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://localhost:3000"
+    const referralLink = `${baseUrl}/auth/register?sponsor=${sponsorId}&upline=${uplineId}`
 
     return NextResponse.json({
       success: true,
-      referralInfo,
+      data: {
+        referralLink,
+        sponsorInfo: {
+          memberId: sponsor[0].memberId,
+          name: `${sponsor[0].firstName} ${sponsor[0].lastName}`,
+          email: sponsor[0].email,
+        },
+        uplineInfo: {
+          memberId: upline[0].memberId,
+          name: `${upline[0].firstName} ${upline[0].lastName}`,
+          email: upline[0].email,
+        },
+        registrationDetails: {
+          sponsorId,
+          uplineId,
+          registrationUrl: referralLink,
+          instructions: [
+            "Share this link with new users",
+            "They can register directly using this link",
+            "Sponsor and Upline information will be pre-filled",
+            "Registration will be instant upon completion",
+          ],
+        },
+      },
     })
   } catch (error) {
-    console.error("❌ Error creating referral link:", error)
-    return NextResponse.json({ success: false, error: "Failed to create referral link" }, { status: 500 })
+    console.error("Error creating referral link:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to create referral link",
+      },
+      { status: 500 },
+    )
   }
 }
