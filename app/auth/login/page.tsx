@@ -128,10 +128,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm">
-            <p className="font-medium text-gray-700">Demo Credentials:</p>
-            <p className="text-gray-600">Admin: admin@brightorian.com / admin123</p>
-          </div>
+          
         </CardContent>
       </Card>
     </div>
