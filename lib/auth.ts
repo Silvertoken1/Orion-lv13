@@ -1,31 +1,41 @@
-import jwt from "jsonwebtoken"
 import bcrypt from "bcryptjs"
+import jwt from "jsonwebtoken"
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-fallback-secret-key-change-in-production"
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production"
 
-export interface TokenPayload {
-  userId: number
-  email: string
-  role: string
-  memberId: string
-}
-
-export function generateToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" })
-}
-
-export function verifyToken(token: string): TokenPayload | null {
+export async function hashPassword(password: string): Promise<string> {
   try {
-    return jwt.verify(token, JWT_SECRET) as TokenPayload
-  } catch {
-    return null
+    const saltRounds = 12
+    return await bcrypt.hash(password, saltRounds)
+  } catch (error) {
+    console.error("Error hashing password:", error)
+    throw new Error("Failed to hash password")
   }
 }
 
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 10)
+export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+  try {
+    return await bcrypt.compare(password, hashedPassword)
+  } catch (error) {
+    console.error("Error verifying password:", error)
+    return false
+  }
 }
 
-export async function comparePassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash)
+export function generateToken(payload: any): string {
+  try {
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" })
+  } catch (error) {
+    console.error("Error generating token:", error)
+    throw new Error("Failed to generate token")
+  }
+}
+
+export function verifyToken(token: string): any {
+  try {
+    return jwt.verify(token, JWT_SECRET)
+  } catch (error) {
+    console.error("Error verifying token:", error)
+    return null
+  }
 }

@@ -6,62 +6,46 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function generateMemberId(): string {
-  const timestamp = Date.now().toString().slice(-6)
+  // Get current timestamp and add random number for uniqueness
+  const timestamp = Date.now()
   const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0")
-  return `BO${timestamp}${random}`
+  const memberNumber = (timestamp + random).toString().slice(-6)
+  return `BO${memberNumber}`
 }
 
-export function generatePin(): string {
-  // Generate a 12-character PIN with letters and numbers
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-  let pin = "PIN"
-
-  for (let i = 0; i < 9; i++) {
-    pin += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-
-  return pin
-}
-
-export function generateTrackingNumber(): string {
-  // Generate a tracking number for package delivery
-  const prefix = "BO"
-  const timestamp = Date.now().toString().slice(-8)
-  const random = Math.floor(Math.random() * 100)
-    .toString()
-    .padStart(2, "0")
-
-  return `${prefix}${timestamp}${random}`
-}
-
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number, currency = "NGN"): string {
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
-    currency: "NGN",
+    currency: currency,
     minimumFractionDigits: 0,
   }).format(amount)
 }
 
-export function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("en-NG", {
+export function formatDate(date: string | Date): string {
+  return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
-  })
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(date))
 }
 
-export function calculateCommission(level: number, amount: number): number {
-  // Commission structure for 6-level matrix
-  const commissionRates = {
-    1: 0.1, // 10% for level 1
-    2: 0.08, // 8% for level 2
-    3: 0.06, // 6% for level 3
-    4: 0.04, // 4% for level 4
-    5: 0.03, // 3% for level 5
-    6: 0.02, // 2% for level 6
+export function generatePin(): string {
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  let result = "PIN"
+  for (let i = 0; i < 6; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length))
   }
+  return result
+}
 
-  return amount * (commissionRates[level as keyof typeof commissionRates] || 0)
+export function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+export function validatePhone(phone: string): boolean {
+  const phoneRegex = /^[+]?[1-9][\d]{0,15}$/
+  return phoneRegex.test(phone.replace(/\s/g, ""))
 }

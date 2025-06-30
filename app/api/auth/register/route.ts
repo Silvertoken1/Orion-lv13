@@ -15,50 +15,100 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!firstName || !email || !phone || !password || !sponsorId || !uplineId) {
-      return NextResponse.json({ error: "All required fields must be filled" }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          message: "All required fields must be filled",
+        },
+        { status: 400 },
+      )
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Please enter a valid email address",
+        },
+        { status: 400 },
+      )
     }
 
     // Check if email already exists
     const existingUser = await getUserByEmail(email)
     if (existingUser) {
-      return NextResponse.json({ error: "Email already registered" }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Email already registered",
+        },
+        { status: 400 },
+      )
     }
 
     // Validate sponsor exists
     const sponsor = await getUserByMemberId(sponsorId)
     if (!sponsor) {
-      return NextResponse.json({ error: "Invalid sponsor ID" }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid sponsor ID",
+        },
+        { status: 400 },
+      )
     }
 
     // Validate upline exists
     const upline = await getUserByMemberId(uplineId)
     if (!upline) {
-      return NextResponse.json({ error: "Invalid upline ID" }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid upline ID",
+        },
+        { status: 400 },
+      )
     }
 
     // Validate PIN if using existing PIN method
     let pinRecord = null
     if (pinMethod === "existing") {
       if (!pin) {
-        return NextResponse.json({ error: "Registration PIN is required" }, { status: 400 })
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Registration PIN is required",
+          },
+          { status: 400 },
+        )
       }
 
       pinRecord = await getPinByCode(pin)
       if (!pinRecord || pinRecord.status !== "available") {
-        return NextResponse.json({ error: "Invalid or already used PIN" }, { status: 400 })
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Invalid or already used PIN",
+          },
+          { status: 400 },
+        )
       }
     }
-
-    // Hash password
-    const passwordHash = await hashPassword(password)
 
     // Generate member ID
     const memberId = generateMemberId()
 
-    // Mark PIN as used if existing PIN method
+    // Hash password
+    const passwordHash = await hashPassword(password)
+
+    // Create user based on PIN method
     let newUser
     if (pinMethod === "existing" && pinRecord) {
-      await usePin(pin, memberId)
+      // Mark PIN as used
+      await usePin(pin, Number.parseInt(memberId.slice(2)))
+
       newUser = await createUser({
         memberId,
         firstName,
@@ -66,8 +116,8 @@ export async function POST(request: NextRequest) {
         email,
         phone,
         passwordHash,
-        sponsorId,
-        uplineId,
+        sponsorId: sponsor.memberId,
+        uplineId: upline.memberId,
         location: location || undefined,
         status: "active",
         role: "user",
@@ -81,8 +131,8 @@ export async function POST(request: NextRequest) {
         email,
         phone,
         passwordHash,
-        sponsorId,
-        uplineId,
+        sponsorId: sponsor.memberId,
+        uplineId: upline.memberId,
         location: location || undefined,
         status: "pending",
         role: "user",
@@ -90,7 +140,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Return success with user data for payment processing
+    // Return success with user data
     return NextResponse.json({
       success: true,
       message:
@@ -107,10 +157,17 @@ export async function POST(request: NextRequest) {
         status: newUser.status,
         packagePrice: packagePrice || 36000,
         pinMethod,
+        fullName,
       },
     })
   } catch (error) {
     console.error("Registration error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal server error",
+      },
+      { status: 500 },
+    )
   }
 }
