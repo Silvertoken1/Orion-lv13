@@ -1,27 +1,22 @@
 import { NextResponse } from "next/server"
-import type { NextRequest } from "next/request"
+import type { NextRequest } from "next/server"
 
-// Simple JWT verification without jose dependency
-function verifyToken(token: string): any {
+const JWT_SECRET = process.env.JWT_SECRET || "your-fallback-secret-key"
+
+function parseJWT(token: string) {
   try {
-    // Simple base64 decode for development - replace with proper JWT verification in production
-    const payload = token.split(".")[1]
-    if (!payload) return null
+    const parts = token.split(".")
+    if (parts.length !== 3) return null
 
-    const decoded = JSON.parse(atob(payload))
-
-    // Check if token is expired
-    if (decoded.exp && decoded.exp < Date.now() / 1000) {
-      return null
-    }
-
-    return decoded
-  } catch (error) {
+    const payload = parts[1]
+    const decoded = Buffer.from(payload, "base64url").toString("utf8")
+    return JSON.parse(decoded)
+  } catch {
     return null
   }
 }
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes that don't require authentication
@@ -34,57 +29,58 @@ export async function middleware(request: NextRequest) {
     "/shop",
     "/locations",
     "/team",
+    "/payment/success",
+    "/payment/verify",
     "/api/auth/login",
     "/api/auth/register",
+    "/api/payment",
     "/api/init",
-    "/api/payment/verify",
     "/setup",
   ]
 
   // Check if the current path is public
-  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route))
+  const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(route + "/"))
 
   if (isPublicRoute) {
     return NextResponse.next()
   }
 
-  // Get token from cookies
+  // Get token from cookie
   const token = request.cookies.get("auth-token")?.value
 
   if (!token) {
     return NextResponse.redirect(new URL("/auth/login", request.url))
   }
 
-  // Verify token
-  const payload = verifyToken(token)
+  // Parse JWT token
+  const payload = parseJWT(token)
+
   if (!payload) {
-    const response = NextResponse.redirect(new URL("/auth/login", request.url))
-    response.cookies.delete("auth-token")
-    return response
+    return NextResponse.redirect(new URL("/auth/login", request.url))
   }
 
-  // Check admin routes
-  if (pathname.startsWith("/admin") && payload.role !== "admin") {
-    return NextResponse.redirect(new URL("/dashboard", request.url))
+  // Check if token is expired
+  if (payload.exp && payload.exp < Date.now() / 1000) {
+    return NextResponse.redirect(new URL("/auth/login", request.url))
   }
 
-  // Check stockist routes
-  if (pathname.startsWith("/stockist") && payload.role !== "stockist") {
-    return NextResponse.redirect(new URL("/dashboard", request.url))
+  // Admin route protection
+  if (pathname.startsWith("/admin")) {
+    if (payload.role !== "admin") {
+      return NextResponse.redirect(new URL("/dashboard", request.url))
+    }
+  }
+
+  // Stockist route protection
+  if (pathname.startsWith("/stockist")) {
+    if (payload.role !== "stockist") {
+      return NextResponse.redirect(new URL("/dashboard", request.url))
+    }
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
-    "/((?!_next/static|_next/image|favicon.ico|public|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|public).*)"],
 }
