@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function generateMemberId(): string {
-  const prefix = "BO"
+  const prefix = "BRT"
   const timestamp = Date.now().toString().slice(-6)
   const random = Math.floor(Math.random() * 1000)
     .toString()
@@ -32,42 +32,75 @@ export function generateTrackingNumber(): string {
   return `${prefix}${timestamp}${random}`
 }
 
-export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
-}
-
-export function validatePhone(phone: string): boolean {
-  const phoneRegex = /^(\+234|234|0)[789][01]\d{8}$/
-  return phoneRegex.test(phone.replace(/\s+/g, ""))
-}
-
-export function formatCurrency(amount: number | string): string {
-  const num = typeof amount === "string" ? Number.parseFloat(amount) : amount
+export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency: "NGN",
-    minimumFractionDigits: 0,
-  }).format(num)
+  }).format(amount)
 }
 
 export function formatDate(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date
-  return d.toLocaleDateString("en-NG", {
+  const d = new Date(date)
+  return d.toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   })
 }
 
-export function calculateCommission(level: number, amount = 36000): number {
-  const commissionRates = {
-    1: 4000,
-    2: 2000,
-    3: 2000,
-    4: 1500,
-    5: 1500,
-    6: 1500,
+export function calculateCommission(amount: number, percentage: number): number {
+  return (amount * percentage) / 100
+}
+
+export function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+export function validatePhone(phone: string): boolean {
+  const phoneRegex = /^(\+234|0)[789][01]\d{8}$/
+  return phoneRegex.test(phone)
+}
+
+export function generateReferralCode(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  let result = ""
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
   }
-  return commissionRates[level as keyof typeof commissionRates] || 0
+  return result
+}
+
+export function slugify(text: string): string {
+  return text
+    .toString()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^\w-]+/g, "")
+    .replace(/--+/g, "-")
+    .replace(/^-+/, "")
+    .replace(/-+$/, "")
+}
+
+export function truncateText(text: string, length: number): string {
+  if (text.length <= length) return text
+  return text.substring(0, length) + "..."
+}
+
+export function getInitials(firstName: string, lastName: string): string {
+  return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+}
+
+export function isValidNigerianPhone(phone: string): boolean {
+  const cleanPhone = phone.replace(/\s+/g, "")
+  return /^(\+234|234|0)?[789][01]\d{8}$/.test(cleanPhone)
+}
+
+export function formatNigerianPhone(phone: string): string {
+  const cleanPhone = phone
+    .replace(/\s+/g, "")
+    .replace(/^\+234/, "")
+    .replace(/^234/, "")
+    .replace(/^0/, "")
+  return `+234${cleanPhone}`
 }

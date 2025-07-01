@@ -1,73 +1,59 @@
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import bcrypt from "bcryptjs"
+import jwt from "jsonwebtoken"
+import { cookies } from "next/headers"
+import type { NextRequest } from "next/server"
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
+
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12)
 }
 
-export function generateMemberId(): string {
-  const prefix = "BO"
-  const timestamp = Date.now().toString().slice(-6)
-  const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0")
-  return `${prefix}${timestamp}${random}`
+export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+  return bcrypt.compare(password, hashedPassword)
 }
 
-export function generatePinCode(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-  let result = ""
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
+export function generateToken(payload: any): string {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" })
+}
+
+export function verifyToken(token: string): any {
+  try {
+    return jwt.verify(token, JWT_SECRET)
+  } catch (error) {
+    return null
   }
-  return result
 }
 
-export function generateTrackingNumber(): string {
-  const prefix = "TRK"
-  const timestamp = Date.now().toString()
-  const random = Math.floor(Math.random() * 10000)
-    .toString()
-    .padStart(4, "0")
-  return `${prefix}${timestamp}${random}`
+export async function verifyTokenFromRequest(request: NextRequest): Promise<any> {
+  try {
+    const token = request.cookies.get("auth-token")?.value
+    if (!token) {
+      return null
+    }
+    return verifyToken(token)
+  } catch (error) {
+    return null
+  }
 }
 
-export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
-}
-
-export function validatePhone(phone: string): boolean {
-  const phoneRegex = /^(\+234|234|0)[789][01]\d{8}$/
-  return phoneRegex.test(phone.replace(/\s+/g, ""))
-}
-
-export function formatCurrency(amount: number | string): string {
-  const num = typeof amount === "string" ? Number.parseFloat(amount) : amount
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    minimumFractionDigits: 0,
-  }).format(num)
-}
-
-export function formatDate(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date
-  return d.toLocaleDateString("en-NG", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+export async function setAuthCookie(token: string) {
+  const cookieStore = await cookies()
+  cookieStore.set("auth-token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 7, // 7 days
   })
 }
 
-export function calculateCommission(level: number, amount = 36000): number {
-  const commissionRates = {
-    1: 4000,
-    2: 2000,
-    3: 2000,
-    4: 1500,
-    5: 1500,
-    6: 1500,
-  }
-  return commissionRates[level as keyof typeof commissionRates] || 0
+export async function getAuthToken(): Promise<string | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get("auth-token")
+  return token?.value || null
+}
+
+export async function removeAuthCookie() {
+  const cookieStore = await cookies()
+  cookieStore.delete("auth-token")
 }
