@@ -9,7 +9,7 @@ function parseJWT(token: string) {
     if (parts.length !== 3) return null
 
     const payload = parts[1]
-    const decoded = Buffer.from(payload, "base64url").toString("utf8")
+    const decoded = Buffer.from(payload, "base64").toString("utf-8")
     return JSON.parse(decoded)
   } catch {
     return null
@@ -19,42 +19,33 @@ function parseJWT(token: string) {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Public routes that don't require authentication
-  const publicRoutes = [
-    "/",
-    "/auth/login",
-    "/auth/register",
-    "/about",
-    "/contact",
-    "/shop",
-    "/locations",
-    "/team",
-    "/payment/success",
-    "/payment/verify",
-    "/api/auth/login",
-    "/api/auth/register",
-    "/api/payment",
-    "/api/init",
-    "/setup",
-  ]
-
-  // Check if the current path is public
-  const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(route + "/"))
-
-  if (isPublicRoute) {
+  // Skip middleware for public routes
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/init") ||
+    pathname.startsWith("/api/payment/verify") ||
+    pathname === "/" ||
+    pathname === "/auth/login" ||
+    pathname === "/auth/register" ||
+    pathname === "/about" ||
+    pathname === "/contact" ||
+    pathname === "/shop" ||
+    pathname === "/locations" ||
+    pathname === "/team" ||
+    pathname.startsWith("/payment/success") ||
+    pathname.includes(".")
+  ) {
     return NextResponse.next()
   }
 
-  // Get token from cookie
   const token = request.cookies.get("auth-token")?.value
 
   if (!token) {
     return NextResponse.redirect(new URL("/auth/login", request.url))
   }
 
-  // Parse JWT token
   const payload = parseJWT(token)
-
   if (!payload) {
     return NextResponse.redirect(new URL("/auth/login", request.url))
   }
@@ -65,22 +56,13 @@ export function middleware(request: NextRequest) {
   }
 
   // Admin route protection
-  if (pathname.startsWith("/admin")) {
-    if (payload.role !== "admin") {
-      return NextResponse.redirect(new URL("/dashboard", request.url))
-    }
-  }
-
-  // Stockist route protection
-  if (pathname.startsWith("/stockist")) {
-    if (payload.role !== "stockist") {
-      return NextResponse.redirect(new URL("/dashboard", request.url))
-    }
+  if (pathname.startsWith("/admin") && payload.role !== "admin") {
+    return NextResponse.redirect(new URL("/dashboard", request.url))
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|public).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$).*)"],
 }

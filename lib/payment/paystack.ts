@@ -66,45 +66,58 @@ export interface PaystackVerifyResponse {
   }
 }
 
-export async function initializePaystackPayment(
-  email: string,
-  amount: number,
-  reference: string,
-  metadata?: any,
-): Promise<PaystackInitializeResponse> {
-  const response = await fetch("https://api.paystack.co/transaction/initialize", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      email,
-      amount: amount * 100, // Convert to kobo
-      reference,
-      metadata,
-      callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/verify`,
-    }),
-  })
+export async function initializePaystackPayment(data: {
+  email: string
+  amount: number
+  reference: string
+  callback_url?: string
+  metadata?: any
+}): Promise<PaystackInitializeResponse> {
+  try {
+    const response = await fetch("https://api.paystack.co/transaction/initialize", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: data.email,
+        amount: data.amount * 100, // Convert to kobo
+        reference: data.reference,
+        callback_url: data.callback_url,
+        metadata: data.metadata,
+      }),
+    })
 
-  if (!response.ok) {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    return result
+  } catch (error) {
+    console.error("Paystack initialize error:", error)
     throw new Error("Failed to initialize payment")
   }
-
-  return response.json()
 }
 
 export async function verifyPaystackPayment(reference: string): Promise<PaystackVerifyResponse> {
-  const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-    },
-  })
+  try {
+    const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      },
+    })
 
-  if (!response.ok) {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const result = await response.json()
+    return result
+  } catch (error) {
+    console.error("Paystack verify error:", error)
     throw new Error("Failed to verify payment")
   }
-
-  return response.json()
 }

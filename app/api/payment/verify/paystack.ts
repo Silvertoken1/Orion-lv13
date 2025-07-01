@@ -1,46 +1,64 @@
-// lib/payment/paystack.ts
-import axios from "axios"
+import { type NextRequest, NextResponse } from "next/server"
+import { verifyPaystackPayment } from "@/lib/payment/paystack"
+import { updatePayment, createPayment, getUserByMemberId } from "@/lib/db"
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY
-const PAYSTACK_BASE_URL = "https://api.paystack.co"
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const reference = searchParams.get("reference")
 
-if (!PAYSTACK_SECRET_KEY) {
-  throw new Error("Missing Paystack secret key in environment variables")
-}
-
-export async function initializePaystackTransaction(data: {
-  email: string
-  amount: number // in Naira
-  metadata?: Record<string, any>
-  callback_url: string
-}) {
-  const { email, amount, metadata, callback_url } = data
-
-  const response = await axios.post(
-    `${PAYSTACK_BASE_URL}/transaction/initialize`,
-    {
-      email,
-      amount: amount * 100, // convert to kobo
-      metadata,
-      callback_url,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
+    if (!reference) {
+      return NextResponse.json({ error: "Reference is required" }, { status: 400 })
     }
-  )
 
-  return response.data
-}
+    const verification = await verifyPaystackPayment(reference)
 
-export async function verifyPaystackTransaction(reference: string) {
-  const response = await axios.get(`${PAYSTACK_BASE_URL}/transaction/verify/${reference}`, {
-    headers: {
-      Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-    },
-  })
+    if (verification.status && verification.data.status === "success") {
+      const { data } = verification
+      const memberId = data.metadata?.memberId
 
-  return response.data
+      if (memberId) {
+        const user = await getUserByMemberId(memberId)
+        if (user) {
+          // Update or create payment record
+          try {
+            await updatePayment(reference, {
+              status: "completed",
+              metadata: JSON.stringify(data.metadata),
+              updatedAt: new Date(),
+            })
+          } catch {
+            // If payment doesn't exist, create it
+            await createPayment({
+              userId: user.id,
+              memberId: user.memberId,
+              amount: (data.amount / 100).toString(),
+              reference: reference,
+              status: "completed",
+              paymentMethod: "paystack",
+              metadata: JSON.stringify(data.metadata),
+            })
+          }
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Payment verified successfully",
+        data: {
+          reference: data.reference,
+          amount: data.amount / 100,
+          status: data.status,
+        },
+      })
+    } else {
+      return NextResponse.json({
+        success: false,
+        message: "Payment verification failed",
+      })
+    }
+  } catch (error) {
+    console.error("Payment verification error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
 }

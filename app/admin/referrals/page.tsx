@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Copy, Mail, MessageCircle, Users, LinkIcon } from "lucide-react"
+import { Copy, Mail, MessageCircle, Users, LinkIcon, Crown } from "lucide-react"
 import { toast } from "sonner"
 
 interface User {
@@ -21,12 +21,12 @@ interface User {
 
 export default function AdminReferralsPage() {
   const [users, setUsers] = useState<User[]>([])
-  const [sponsorId, setSponsorId] = useState("")
-  const [uplineId, setUplineId] = useState("")
+  const [sponsorId, setSponsorId] = useState("MASTER001")
+  const [uplineId, setUplineId] = useState("MASTER001")
   const [referralLink, setReferralLink] = useState("")
   const [loading, setLoading] = useState(false)
-  const [sponsor, setSponsor] = useState<User | null>(null)
-  const [upline, setUpline] = useState<User | null>(null)
+  const [sponsor, setSponsor] = useState<any>(null)
+  const [upline, setUpline] = useState<any>(null)
 
   useEffect(() => {
     fetchUsers()
@@ -140,6 +140,12 @@ Welcome to the team! 🚀`
                   <SelectValue placeholder="Choose sponsor..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="MASTER001">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-yellow-600" />
+                      MASTER001 (Master Sponsor)
+                    </div>
+                  </SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.memberId}>
                       {user.firstName} {user.lastName} ({user.memberId})
@@ -156,6 +162,12 @@ Welcome to the team! 🚀`
                   <SelectValue placeholder="Choose upline..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="MASTER001">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-yellow-600" />
+                      MASTER001 (Master Upline)
+                    </div>
+                  </SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.memberId}>
                       {user.firstName} {user.lastName} ({user.memberId})
@@ -174,28 +186,41 @@ Welcome to the team! 🚀`
         {/* Quick Setup */}
         <Card>
           <CardHeader>
-            <CardTitle>Quick Setup</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-yellow-600" />
+              Master Account Setup
+            </CardTitle>
             <CardDescription>Use default master account for new registrations</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <h3 className="font-semibold text-blue-900">Master Account Details</h3>
-              <div className="mt-2 space-y-1 text-sm text-blue-800">
-                <p>
-                  <strong>Sponsor ID:</strong> MASTER001
-                </p>
-                <p>
-                  <strong>Upline ID:</strong> MASTER001
-                </p>
-                <p>
-                  <strong>Master PINs:</strong> MASTER2024, BRIGHT001, ORION123
-                </p>
+            <div className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg">
+              <h3 className="font-semibold text-yellow-900 mb-2">Master Account Details</h3>
+              <div className="space-y-2 text-sm text-yellow-800">
+                <div className="flex justify-between">
+                  <span className="font-medium">Sponsor ID:</span>
+                  <code className="bg-yellow-100 px-2 py-1 rounded">MASTER001</code>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Upline ID:</span>
+                  <code className="bg-yellow-100 px-2 py-1 rounded">MASTER001</code>
+                </div>
+                <div className="mt-3 pt-2 border-t border-yellow-300">
+                  <span className="font-medium">Master PINs:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {["MASTER2024", "BRIGHT001", "ORION123", "ADMIN999", "TEST1234"].map((pin) => (
+                      <code key={pin} className="bg-yellow-100 px-2 py-1 rounded text-xs">
+                        {pin}
+                      </code>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
             <Button
               onClick={() => {
                 setSponsorId("MASTER001")
                 setUplineId("MASTER001")
+                toast.success("Master account selected")
               }}
               variant="outline"
               className="w-full"
@@ -216,17 +241,19 @@ Welcome to the team! 🚀`
           <CardContent className="space-y-4">
             {/* Registration Details */}
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="p-4 bg-green-50 rounded-lg">
-                <h3 className="font-semibold text-green-900">Sponsor Information</h3>
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <h3 className="font-semibold text-green-900 mb-1">Sponsor Information</h3>
                 <p className="text-sm text-green-800">
-                  {sponsor?.firstName} {sponsor?.lastName} ({sponsor?.memberId})
+                  {sponsor?.firstName} {sponsor?.lastName}
                 </p>
+                <code className="text-xs bg-green-100 px-2 py-1 rounded">{sponsor?.memberId}</code>
               </div>
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <h3 className="font-semibold text-blue-900">Upline Information</h3>
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h3 className="font-semibold text-blue-900 mb-1">Upline Information</h3>
                 <p className="text-sm text-blue-800">
-                  {upline?.firstName} {upline?.lastName} ({upline?.memberId})
+                  {upline?.firstName} {upline?.lastName}
                 </p>
+                <code className="text-xs bg-blue-100 px-2 py-1 rounded">{upline?.memberId}</code>
               </div>
             </div>
 
@@ -234,7 +261,7 @@ Welcome to the team! 🚀`
             <div className="space-y-2">
               <Label>Referral Link</Label>
               <div className="flex gap-2">
-                <Input value={referralLink} readOnly className="flex-1" />
+                <Input value={referralLink} readOnly className="flex-1 font-mono text-sm" />
                 <Button size="icon" variant="outline" onClick={() => copyToClipboard(referralLink)}>
                   <Copy className="h-4 w-4" />
                 </Button>
@@ -246,17 +273,24 @@ Welcome to the team! 🚀`
               <Label>Registration Instructions</Label>
               <Textarea
                 readOnly
-                value={`To register on Bright Orion MLM Platform:
+                value={`🎯 REGISTRATION INSTRUCTIONS:
 
-1. Visit: ${referralLink}
-2. Or manually enter:
-   - Sponsor ID: ${sponsor?.memberId}
-   - Upline ID: ${upline?.memberId}
-3. Fill in your personal information
-4. Complete registration
+1. Click the referral link above to register automatically
+2. Or visit /auth/register and manually enter:
+   • Sponsor ID: ${sponsor?.memberId}
+   • Upline ID: ${upline?.memberId}
 
-Your account will be activated immediately!`}
-                rows={8}
+3. Fill in your personal information:
+   • First Name & Last Name
+   • Email Address
+   • Phone Number
+   • Password
+
+4. Complete registration and your account will be activated immediately!
+
+💡 TIP: Using the referral link automatically fills in the sponsor and upline information.`}
+                rows={12}
+                className="font-mono text-sm"
               />
             </div>
 
@@ -285,6 +319,36 @@ Your account will be activated immediately!`}
           </CardContent>
         </Card>
       )}
+
+      {/* Instructions Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>📋 How New Users Register</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <h4 className="font-semibold mb-3 text-green-700">✅ With Referral Link (Recommended)</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>• Click the generated referral link</li>
+                <li>• Sponsor and upline are automatically filled</li>
+                <li>• Fill personal information only</li>
+                <li>• Submit and account is activated instantly</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-3 text-blue-700">📝 Manual Registration</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>• Visit /auth/register</li>
+                <li>• Choose "Referral Registration"</li>
+                <li>• Enter provided Sponsor ID and Upline ID</li>
+                <li>• Complete personal information</li>
+                <li>• Submit for instant activation</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
