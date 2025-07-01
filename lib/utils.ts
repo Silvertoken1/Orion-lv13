@@ -5,15 +5,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function generateMemberId(): string {
-  const prefix = "BRT"
-  const timestamp = Date.now().toString().slice(-6)
-  const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0")
-  return `${prefix}${timestamp}${random}`
-}
-
 export function generatePinCode(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
   let result = ""
@@ -21,6 +12,15 @@ export function generatePinCode(): string {
     result += chars.charAt(Math.floor(Math.random() * chars.length))
   }
   return result
+}
+
+export function generateMemberId(): string {
+  const prefix = "BO"
+  const timestamp = Date.now().toString().slice(-6)
+  const random = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0")
+  return `${prefix}${timestamp}${random}`
 }
 
 export function generateTrackingNumber(): string {
@@ -39,17 +39,23 @@ export function formatCurrency(amount: number): string {
   }).format(amount)
 }
 
-export function formatDate(date: Date | string): string {
-  const d = new Date(date)
-  return d.toLocaleDateString("en-US", {
+export function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
-  })
+  }).format(date)
 }
 
-export function calculateCommission(amount: number, percentage: number): number {
-  return (amount * percentage) / 100
+export function calculateCommission(amount: number, level: number): number {
+  const rates = {
+    1: 0.1, // 10% for direct referrals
+    2: 0.05, // 5% for second level
+    3: 0.03, // 3% for third level
+    4: 0.02, // 2% for fourth level
+    5: 0.01, // 1% for fifth level
+  }
+  return amount * (rates[level as keyof typeof rates] || 0)
 }
 
 export function validateEmail(email: string): boolean {
@@ -62,45 +68,26 @@ export function validatePhone(phone: string): boolean {
   return phoneRegex.test(phone)
 }
 
-export function generateReferralCode(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-  let result = ""
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return result
-}
-
-export function slugify(text: string): string {
-  return text
+export function generateReferralCode(name: string): string {
+  const cleanName = name.replace(/[^a-zA-Z]/g, "").toUpperCase()
+  const namePrefix = cleanName.slice(0, 3)
+  const random = Math.floor(Math.random() * 1000)
     .toString()
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^\w-]+/g, "")
-    .replace(/--+/g, "-")
-    .replace(/^-+/, "")
-    .replace(/-+$/, "")
+    .padStart(3, "0")
+  return `${namePrefix}${random}`
 }
 
-export function truncateText(text: string, length: number): string {
-  if (text.length <= length) return text
-  return text.substring(0, length) + "..."
-}
+export function calculateMatrixPosition(totalUsers: number): { level: number; position: number } {
+  let level = 1
+  let usersInLevel = 2
+  let totalUsersUpToLevel = 2
 
-export function getInitials(firstName: string, lastName: string): string {
-  return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
-}
+  while (totalUsers > totalUsersUpToLevel) {
+    level++
+    usersInLevel *= 2
+    totalUsersUpToLevel += usersInLevel
+  }
 
-export function isValidNigerianPhone(phone: string): boolean {
-  const cleanPhone = phone.replace(/\s+/g, "")
-  return /^(\+234|234|0)?[789][01]\d{8}$/.test(cleanPhone)
-}
-
-export function formatNigerianPhone(phone: string): string {
-  const cleanPhone = phone
-    .replace(/\s+/g, "")
-    .replace(/^\+234/, "")
-    .replace(/^234/, "")
-    .replace(/^0/, "")
-  return `+234${cleanPhone}`
+  const position = totalUsers - (totalUsersUpToLevel - usersInLevel)
+  return { level, position }
 }

@@ -1,57 +1,46 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { emailService } from "@/lib/email-service"
+import { db, activationPins } from "@/lib/db"
+import { verifyTokenFromRequest } from "@/lib/auth"
+import { generatePinCode } from "@/lib/utils"
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { customerName, customerEmail, customerPhone, notes, adminId } = body
+    const decoded = await verifyTokenFromRequest(request)
 
-    if (!customerName || !customerEmail || !adminId) {
-      return NextResponse.json({ error: "Customer name, email, and admin ID are required" }, { status: 400 })
+    if (!decoded || decoded.role !== "admin") {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 })
     }
 
-    // Generate custom PIN
-    const pin = generateCustomPin()
+    const { count } = await request.json()
 
-    // In a real app, you would:
-    // 1. Insert PIN into database with customer info
-    // 2. Mark PIN as "Reserved" for this customer
-    // 3. Log admin action
-
-    const pinData = {
-      pin,
-      status: "reserved",
-      customerName,
-      customerEmail,
-      customerPhone: customerPhone || null,
-      notes: notes || null,
-      createdBy: adminId,
-      createdAt: new Date().toISOString(),
+    if (!count || count < 1 || count > 100) {
+      return NextResponse.json({ error: "Count must be between 1 and 100" }, { status: 400 })
     }
 
-    console.log("Generated custom PIN:", pinData)
+    const generatedPins = []
 
-    // Send PIN to customer via email
-    const emailSent = await emailService.sendCustomPinEmail(customerEmail, customerName, pin)
+    for (let i = 0; i < count; i++) {
+      const pinCode = generatePinCode()
 
-    if (!emailSent) {
-      return NextResponse.json({ error: "PIN generated but email failed to send" }, { status: 500 })
+      const pin = await db
+        .insert(activationPins)
+        .values({
+          pinCode,
+          status: "available",
+          createdBy: decoded.userId,
+        })
+        .returning()
+
+      generatedPins.push(pin[0])
     }
 
     return NextResponse.json({
       success: true,
-      message: `PIN generated and sent to ${customerEmail}`,
-      pin: pinData,
+      message: `${count} PINs generated successfully`,
+      pins: generatedPins,
     })
   } catch (error) {
-    console.error("Custom PIN generation error:", error)
-    return NextResponse.json({ error: "Failed to generate custom PIN" }, { status: 500 })
+    console.error("PIN generation error:", error)
+    return NextResponse.json({ error: "Failed to generate PINs" }, { status: 500 })
   }
-}
-
-function generateCustomPin(): string {
-  const prefix = "PIN"
-  const timestamp = Date.now().toString().slice(-6)
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase()
-  return `${prefix}${timestamp}${random}`
 }
