@@ -1,221 +1,255 @@
 import { neon } from "@neondatabase/serverless"
 import { drizzle } from "drizzle-orm/neon-http"
-import { pgTable, serial, varchar, text, timestamp, decimal, boolean, integer, jsonb } from "drizzle-orm/pg-core"
-import { eq, desc, count, sum } from "drizzle-orm"
+import { pgTable, text, timestamp, boolean, integer, decimal, varchar, serial } from "drizzle-orm/pg-core"
+import { eq, and, desc, count, sum } from "drizzle-orm"
 
+// Database connection
 const sql = neon(process.env.DATABASE_URL!)
 export const db = drizzle(sql)
 
-// Database Schema
+// Database schemas
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   memberId: varchar("member_id", { length: 20 }).unique().notNull(),
   email: varchar("email", { length: 255 }).unique().notNull(),
-  password: varchar("password", { length: 255 }).notNull(),
+  password: text("password").notNull(),
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
   phone: varchar("phone", { length: 20 }).notNull(),
-  address: text("address"),
   sponsorId: varchar("sponsor_id", { length: 20 }),
   uplineId: varchar("upline_id", { length: 20 }),
-  role: varchar("role", { length: 20 }).default("user"),
-  status: varchar("status", { length: 20 }).default("active"),
-  totalEarnings: decimal("total_earnings", { precision: 10, scale: 2 }).default("0"),
-  availableBalance: decimal("available_balance", { precision: 10, scale: 2 }).default("0"),
-  totalReferrals: integer("total_referrals").default(0),
-  isActivated: boolean("is_activated").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  role: varchar("role", { length: 20 }).default("user").notNull(),
+  isActive: boolean("is_active").default(false).notNull(),
+  isEmailVerified: boolean("is_email_verified").default(false).notNull(),
+  totalEarnings: decimal("total_earnings", { precision: 10, scale: 2 }).default("0.00"),
+  availableBalance: decimal("available_balance", { precision: 10, scale: 2 }).default("0.00"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
 export const activationPins = pgTable("activation_pins", {
   id: serial("id").primaryKey(),
   pinCode: varchar("pin_code", { length: 20 }).unique().notNull(),
-  pin: varchar("pin", { length: 20 }).unique().notNull(),
-  isUsed: boolean("is_used").default(false),
+  isUsed: boolean("is_used").default(false).notNull(),
   usedBy: varchar("used_by", { length: 20 }),
-  createdAt: timestamp("created_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
   usedAt: timestamp("used_at"),
-})
-
-export const payments = pgTable("payments", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id"),
-  memberId: varchar("member_id", { length: 20 }).notNull(),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  type: varchar("type", { length: 50 }).notNull(),
-  status: varchar("status", { length: 20 }).default("pending"),
-  reference: varchar("reference", { length: 100 }).unique(),
-  trackingNumber: varchar("tracking_number", { length: 50 }),
-  paymentMethod: varchar("payment_method", { length: 50 }),
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 })
 
 export const commissions = pgTable("commissions", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id"),
-  memberId: varchar("member_id", { length: 20 }).notNull(),
-  fromUserId: integer("from_user_id"),
-  fromMemberId: varchar("from_member_id", { length: 20 }).notNull(),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  userId: varchar("user_id", { length: 20 }).notNull(),
+  fromUserId: varchar("from_user_id", { length: 20 }).notNull(),
   level: integer("level").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  type: varchar("type", { length: 50 }).default("referral").notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 20 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   type: varchar("type", { length: 50 }).notNull(),
-  status: varchar("status", { length: 20 }).default("pending"),
-  percentage: decimal("percentage", { precision: 5, scale: 2 }).notNull(),
-  paymentId: integer("payment_id"),
-  createdAt: timestamp("created_at").defaultNow(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  reference: varchar("reference", { length: 100 }).unique(),
+  paymentMethod: varchar("payment_method", { length: 50 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
 export const stockists = pgTable("stockists", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id"),
-  businessName: varchar("business_name", { length: 255 }).notNull(),
-  ownerName: varchar("owner_name", { length: 255 }).notNull(),
-  email: varchar("email", { length: 255 }).unique().notNull(),
-  phone: varchar("phone", { length: 20 }).notNull(),
-  address: text("address").notNull(),
-  city: varchar("city", { length: 100 }).notNull(),
-  state: varchar("state", { length: 100 }).notNull(),
-  password: varchar("password", { length: 255 }).notNull(),
-  status: varchar("status", { length: 20 }).default("pending"),
-  stockLevel: integer("stock_level").default(0),
-  totalSales: decimal("total_sales", { precision: 10, scale: 2 }).default("0"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  userId: varchar("user_id", { length: 20 }).notNull(),
+  businessName: varchar("business_name", { length: 200 }).notNull(),
+  businessAddress: text("business_address").notNull(),
+  state: varchar("state", { length: 50 }).notNull(),
+  lga: varchar("lga", { length: 100 }).notNull(),
+  bankName: varchar("bank_name", { length: 100 }).notNull(),
+  accountNumber: varchar("account_number", { length: 20 }).notNull(),
+  accountName: varchar("account_name", { length: 200 }).notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  stockLevel: integer("stock_level").default(0).notNull(),
+  totalSales: decimal("total_sales", { precision: 10, scale: 2 }).default("0.00"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
-export const systemSettings = pgTable("system_settings", {
-  id: serial("id").primaryKey(),
-  settingKey: varchar("setting_key", { length: 100 }).unique().notNull(),
-  settingValue: text("setting_value").notNull(),
-  description: text("description"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-})
-
-// Database Functions
-export async function getDatabase() {
-  return {
-    users: await db.select().from(users),
-    stockists: await db.select().from(stockists),
-    activationPins: await db.select().from(activationPins),
-    payments: await db.select().from(payments),
-    commissions: await db.select().from(commissions),
-  }
-}
-
+// Database functions
 export async function createUser(userData: any) {
-  return await db.insert(users).values(userData).returning()
+  try {
+    const [user] = await db.insert(users).values(userData).returning()
+    return { success: true, user }
+  } catch (error) {
+    console.error("Error creating user:", error)
+    return { success: false, error: "Failed to create user" }
+  }
 }
 
 export async function getUserByEmail(email: string) {
-  const result = await db.select().from(users).where(eq(users.email, email)).limit(1)
-  return result[0] || null
+  try {
+    const [user] = await db.select().from(users).where(eq(users.email, email))
+    return user
+  } catch (error) {
+    console.error("Error getting user by email:", error)
+    return null
+  }
 }
 
 export async function getUserByMemberId(memberId: string) {
-  const result = await db.select().from(users).where(eq(users.memberId, memberId)).limit(1)
-  return result[0] || null
+  try {
+    const [user] = await db.select().from(users).where(eq(users.memberId, memberId))
+    return user
+  } catch (error) {
+    console.error("Error getting user by member ID:", error)
+    return null
+  }
 }
 
-export async function getAllUsers() {
-  return await db.select().from(users).orderBy(desc(users.createdAt))
+export async function updateUser(memberId: string, updates: any) {
+  try {
+    const [user] = await db.update(users).set(updates).where(eq(users.memberId, memberId)).returning()
+    return { success: true, user }
+  } catch (error) {
+    console.error("Error updating user:", error)
+    return { success: false, error: "Failed to update user" }
+  }
 }
 
 export async function createActivationPin(pinCode: string) {
-  return await db.insert(activationPins).values({ pinCode, pin: pinCode }).returning()
+  try {
+    const [pin] = await db.insert(activationPins).values({ pinCode }).returning()
+    return { success: true, pin }
+  } catch (error) {
+    console.error("Error creating activation pin:", error)
+    return { success: false, error: "Failed to create activation pin" }
+  }
 }
 
-export async function getActivationPin(pinCode: string) {
-  const result = await db.select().from(activationPins).where(eq(activationPins.pinCode, pinCode)).limit(1)
-  return result[0] || null
+export async function validateActivationPin(pinCode: string) {
+  try {
+    const [pin] = await db
+      .select()
+      .from(activationPins)
+      .where(and(eq(activationPins.pinCode, pinCode), eq(activationPins.isUsed, false)))
+    return pin
+  } catch (error) {
+    console.error("Error validating activation pin:", error)
+    return null
+  }
 }
 
 export async function useActivationPin(pinCode: string, usedBy: string) {
-  return await db
-    .update(activationPins)
-    .set({ isUsed: true, usedBy, usedAt: new Date() })
-    .where(eq(activationPins.pinCode, pinCode))
-    .returning()
-}
-
-export async function createPayment(paymentData: any) {
-  return await db.insert(payments).values(paymentData).returning()
-}
-
-export async function getPaymentByReference(reference: string) {
-  const result = await db.select().from(payments).where(eq(payments.reference, reference)).limit(1)
-  return result[0] || null
-}
-
-export async function updatePaymentStatus(reference: string, status: string) {
-  return await db
-    .update(payments)
-    .set({ status, updatedAt: new Date() })
-    .where(eq(payments.reference, reference))
-    .returning()
+  try {
+    const [pin] = await db
+      .update(activationPins)
+      .set({
+        isUsed: true,
+        usedBy,
+        usedAt: new Date(),
+      })
+      .where(eq(activationPins.pinCode, pinCode))
+      .returning()
+    return { success: true, pin }
+  } catch (error) {
+    console.error("Error using activation pin:", error)
+    return { success: false, error: "Failed to use activation pin" }
+  }
 }
 
 export async function createCommission(commissionData: any) {
-  return await db.insert(commissions).values(commissionData).returning()
+  try {
+    const [commission] = await db.insert(commissions).values(commissionData).returning()
+    return { success: true, commission }
+  } catch (error) {
+    console.error("Error creating commission:", error)
+    return { success: false, error: "Failed to create commission" }
+  }
 }
 
 export async function getUserCommissions(userId: string) {
-  return await db
-    .select()
-    .from(commissions)
-    .where(eq(commissions.memberId, userId))
-    .orderBy(desc(commissions.createdAt))
-}
-
-export async function getAdminStats() {
-  const totalUsers = await db.select({ count: count() }).from(users)
-  const totalPayments = await db
-    .select({ sum: sum(payments.amount) })
-    .from(payments)
-    .where(eq(payments.status, "completed"))
-  const totalCommissions = await db
-    .select({ sum: sum(commissions.amount) })
-    .from(commissions)
-    .where(eq(commissions.status, "approved"))
-
-  return {
-    totalUsers: totalUsers[0]?.count || 0,
-    totalPayments: totalPayments[0]?.sum || "0",
-    totalCommissions: totalCommissions[0]?.sum || "0",
+  try {
+    const userCommissions = await db
+      .select()
+      .from(commissions)
+      .where(eq(commissions.userId, userId))
+      .orderBy(desc(commissions.createdAt))
+    return userCommissions
+  } catch (error) {
+    console.error("Error getting user commissions:", error)
+    return []
   }
 }
 
-export async function createStockist(stockistData: any) {
-  return await db.insert(stockists).values(stockistData).returning()
-}
-
-export async function getAllStockists() {
-  return await db.select().from(stockists).orderBy(desc(stockists.createdAt))
-}
-
-export async function updateStockistStatus(id: number, status: string) {
-  return await db.update(stockists).set({ status, updatedAt: new Date() }).where(eq(stockists.id, id)).returning()
-}
-
-export async function getUserStats() {
-  const totalUsers = await db.select({ count: count() }).from(users)
-  const activeUsers = await db.select({ count: count() }).from(users).where(eq(users.status, "active"))
-  const totalPayments = await db
-    .select({ sum: sum(payments.amount) })
-    .from(payments)
-    .where(eq(payments.status, "completed"))
-  const totalCommissions = await db.select({ sum: sum(commissions.amount) }).from(commissions)
-
-  return {
-    totalUsers: totalUsers[0]?.count || 0,
-    activeUsers: activeUsers[0]?.count || 0,
-    totalPayments: totalPayments[0]?.sum || 0,
-    totalCommissions: totalCommissions[0]?.sum || 0,
+export async function getAllUsers() {
+  try {
+    const allUsers = await db.select().from(users).orderBy(desc(users.createdAt))
+    return allUsers
+  } catch (error) {
+    console.error("Error getting all users:", error)
+    return []
   }
 }
 
-// Export database connection for direct queries
-export { sql }
+export async function getActiveUsers() {
+  try {
+    const activeUsers = await db.select().from(users).where(eq(users.isActive, true))
+    return activeUsers
+  } catch (error) {
+    console.error("Error getting active users:", error)
+    return []
+  }
+}
+
+export async function getUnusedPins() {
+  try {
+    const unusedPins = await db.select().from(activationPins).where(eq(activationPins.isUsed, false))
+    return unusedPins
+  } catch (error) {
+    console.error("Error getting unused pins:", error)
+    return []
+  }
+}
+
+export async function getUsedPins() {
+  try {
+    const usedPins = await db.select().from(activationPins).where(eq(activationPins.isUsed, true))
+    return usedPins
+  } catch (error) {
+    console.error("Error getting used pins:", error)
+    return []
+  }
+}
+
+export async function getDashboardStats() {
+  try {
+    const [totalUsersResult] = await db.select({ count: count() }).from(users)
+    const [activeUsersResult] = await db.select({ count: count() }).from(users).where(eq(users.isActive, true))
+    const [totalEarningsResult] = await db.select({ total: sum(users.totalEarnings) }).from(users)
+    const [unusedPinsResult] = await db
+      .select({ count: count() })
+      .from(activationPins)
+      .where(eq(activationPins.isUsed, false))
+
+    return {
+      totalUsers: totalUsersResult.count || 0,
+      activeUsers: activeUsersResult.count || 0,
+      totalEarnings: totalEarningsResult.total || "0.00",
+      unusedPins: unusedPinsResult.count || 0,
+    }
+  } catch (error) {
+    console.error("Error getting dashboard stats:", error)
+    return {
+      totalUsers: 0,
+      activeUsers: 0,
+      totalEarnings: "0.00",
+      unusedPins: 0,
+    }
+  }
+}
+
+// Legacy function for backward compatibility
+export async function getDatabase() {
+  return db
+}

@@ -5,15 +5,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function generatePinCode(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-  let result = ""
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return result
-}
-
 export function generateMemberId(): string {
   const prefix = "BO"
   const timestamp = Date.now().toString().slice(-6)
@@ -21,6 +12,15 @@ export function generateMemberId(): string {
     .toString()
     .padStart(3, "0")
   return `${prefix}${timestamp}${random}`
+}
+
+export function generatePinCode(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  let result = ""
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return result
 }
 
 export function generateTrackingNumber(): string {
@@ -32,30 +32,25 @@ export function generateTrackingNumber(): string {
   return `${prefix}${timestamp}${random}`
 }
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | string): string {
+  const num = typeof amount === "string" ? Number.parseFloat(amount) : amount
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency: "NGN",
-  }).format(amount)
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(num)
 }
 
-export function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
+export function formatDate(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date
+  return new Intl.DateTimeFormat("en-NG", {
     year: "numeric",
     month: "long",
     day: "numeric",
-  }).format(date)
-}
-
-export function calculateCommission(amount: number, level: number): number {
-  const rates = {
-    1: 0.1, // 10% for direct referrals
-    2: 0.05, // 5% for second level
-    3: 0.03, // 3% for third level
-    4: 0.02, // 2% for fourth level
-    5: 0.01, // 1% for fifth level
-  }
-  return amount * (rates[level as keyof typeof rates] || 0)
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d)
 }
 
 export function validateEmail(email: string): boolean {
@@ -68,26 +63,60 @@ export function validatePhone(phone: string): boolean {
   return phoneRegex.test(phone)
 }
 
-export function generateReferralCode(name: string): string {
-  const cleanName = name.replace(/[^a-zA-Z]/g, "").toUpperCase()
-  const namePrefix = cleanName.slice(0, 3)
-  const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0")
-  return `${namePrefix}${random}`
+export function calculateCommission(level: number): number {
+  const commissionRates = {
+    1: 4000,
+    2: 2000,
+    3: 2000,
+    4: 1500,
+    5: 1500,
+    6: 1500,
+  }
+  return commissionRates[level as keyof typeof commissionRates] || 0
 }
 
-export function calculateMatrixPosition(totalUsers: number): { level: number; position: number } {
-  let level = 1
-  let usersInLevel = 2
-  let totalUsersUpToLevel = 2
+export function getCommissionLevels(): Array<{ level: number; amount: number }> {
+  return [
+    { level: 1, amount: 4000 },
+    { level: 2, amount: 2000 },
+    { level: 3, amount: 2000 },
+    { level: 4, amount: 1500 },
+    { level: 5, amount: 1500 },
+    { level: 6, amount: 1500 },
+  ]
+}
 
-  while (totalUsers > totalUsersUpToLevel) {
-    level++
-    usersInLevel *= 2
-    totalUsersUpToLevel += usersInLevel
+// Hash password using Web Crypto API (works in both Node.js and browsers)
+export async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(password)
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
+  return hashHex
+}
+
+// Verify password using Web Crypto API
+export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+  const hashedInput = await hashPassword(password)
+  return hashedInput === hashedPassword
+}
+
+export function sanitizeInput(input: string): string {
+  return input.trim().replace(/[<>]/g, "")
+}
+
+export function generateReferralLink(memberId: string, baseUrl: string): string {
+  return `${baseUrl}/auth/register?sponsor=${memberId}&upline=${memberId}`
+}
+
+export function isValidMemberId(memberId: string): boolean {
+  return /^[A-Z0-9]{6,20}$/.test(memberId)
+}
+
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message
   }
-
-  const position = totalUsers - (totalUsersUpToLevel - usersInLevel)
-  return { level, position }
+  return "An unknown error occurred"
 }

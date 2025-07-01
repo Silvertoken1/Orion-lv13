@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import Image from "next/image"
 import { Users, TrendingUp, Shield, Award, Star, CheckCircle, ArrowRight, Play } from "lucide-react"
 
 export default function HomePage() {
@@ -82,26 +83,62 @@ export default function HomePage() {
             {/* Right Content - Hero Image - Fixed for Mobile */}
             <div className="relative">
               <div className="relative w-full h-64 md:h-80 lg:h-96 rounded-2xl overflow-hidden shadow-2xl">
-                {/* Mobile-optimized image with fallback */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-blue-200 to-blue-300">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center p-6">
-                      <div className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-4 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center shadow-lg">
-                        <span className="text-white font-bold text-xl md:text-2xl">BO</span>
-                      </div>
-                      <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-2">Bright Orion</h3>
-                      <p className="text-sm md:text-base text-gray-600">MLM Success Platform</p>
-                      <div className="mt-4 flex justify-center space-x-2">
-                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-75"></div>
-                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse delay-150"></div>
+                {/* Mobile-first approach with fallback */}
+                <div className="block md:hidden">
+                  {/* Mobile fallback with gradient background */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-blue-200 to-blue-300">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center p-6">
+                        <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center shadow-lg">
+                          <span className="text-white font-bold text-xl">BO</span>
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-2">Bright Orion</h3>
+                        <p className="text-sm text-gray-600">MLM Success Platform</p>
+                        <div className="mt-4 flex justify-center space-x-2">
+                          <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-75"></div>
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse delay-150"></div>
+                        </div>
                       </div>
                     </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
+                    <div className="absolute top-4 right-4 w-16 h-16 bg-white/20 rounded-full blur-xl"></div>
+                    <div className="absolute bottom-8 left-8 w-12 h-12 bg-white/15 rounded-full blur-lg"></div>
                   </div>
-                  {/* Overlay pattern for visual appeal */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
-                  <div className="absolute top-4 right-4 w-16 h-16 bg-white/20 rounded-full blur-xl"></div>
-                  <div className="absolute bottom-8 left-8 w-12 h-12 bg-white/15 rounded-full blur-lg"></div>
+                </div>
+
+                {/* Desktop image */}
+                <div className="hidden md:block">
+                  <Image
+                    src="/placeholder.svg?height=400&width=600"
+                    alt="Bright Orion Success Story"
+                    fill
+                    className="object-cover"
+                    priority
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    onError={(e) => {
+                      // Fallback if image fails to load on desktop too
+                      const target = e.target as HTMLImageElement
+                      target.style.display = "none"
+                      const parent = target.parentElement
+                      if (parent) {
+                        parent.innerHTML = `
+                          <div class="absolute inset-0 bg-gradient-to-br from-blue-100 via-blue-200 to-blue-300">
+                            <div class="absolute inset-0 flex items-center justify-center">
+                              <div class="text-center p-8">
+                                <div class="w-24 h-24 mx-auto mb-4 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center shadow-lg">
+                                  <span class="text-white font-bold text-2xl">BO</span>
+                                </div>
+                                <h3 class="text-xl font-bold text-gray-800 mb-2">Bright Orion</h3>
+                                <p class="text-gray-600">MLM Success Platform</p>
+                              </div>
+                            </div>
+                          </div>
+                        `
+                      }
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                 </div>
               </div>
 
