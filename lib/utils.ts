@@ -5,88 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function generateMemberId(): string {
-  const prefix = "BO"
-  const timestamp = Date.now().toString().slice(-6)
-  const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0")
-  return `${prefix}${timestamp}${random}`
-}
-
-export function generatePinCode(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-  let result = ""
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return result
-}
-
-export function generateTrackingNumber(): string {
-  const prefix = "TRK"
-  const timestamp = Date.now().toString()
-  const random = Math.floor(Math.random() * 10000)
-    .toString()
-    .padStart(4, "0")
-  return `${prefix}${timestamp}${random}`
-}
-
-export function formatCurrency(amount: number | string): string {
-  const num = typeof amount === "string" ? Number.parseFloat(amount) : amount
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(num)
-}
-
-export function formatDate(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date
-  return new Intl.DateTimeFormat("en-NG", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(d)
-}
-
-export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
-}
-
-export function validatePhone(phone: string): boolean {
-  const phoneRegex = /^(\+234|0)[789][01]\d{8}$/
-  return phoneRegex.test(phone)
-}
-
-export function calculateCommission(level: number): number {
-  const commissionRates = {
-    1: 4000,
-    2: 2000,
-    3: 2000,
-    4: 1500,
-    5: 1500,
-    6: 1500,
-  }
-  return commissionRates[level as keyof typeof commissionRates] || 0
-}
-
-export function getCommissionLevels(): Array<{ level: number; amount: number }> {
-  return [
-    { level: 1, amount: 4000 },
-    { level: 2, amount: 2000 },
-    { level: 3, amount: 2000 },
-    { level: 4, amount: 1500 },
-    { level: 5, amount: 1500 },
-    { level: 6, amount: 1500 },
-  ]
-}
-
-// Hash password using Web Crypto API (works in both Node.js and browsers)
+// Password hashing using Web Crypto API (works in both Node.js and browsers)
 export async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder()
   const data = encoder.encode(password)
@@ -96,27 +15,186 @@ export async function hashPassword(password: string): Promise<string> {
   return hashHex
 }
 
-// Verify password using Web Crypto API
+// Verify password
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
   const hashedInput = await hashPassword(password)
   return hashedInput === hashedPassword
 }
 
-export function sanitizeInput(input: string): string {
-  return input.trim().replace(/[<>]/g, "")
+// Generate member ID
+export function generateMemberId(): string {
+  const prefix = "BO"
+  const timestamp = Date.now().toString().slice(-6)
+  const random = Math.random().toString(36).substring(2, 4).toUpperCase()
+  return `${prefix}${timestamp}${random}`
 }
 
-export function generateReferralLink(memberId: string, baseUrl: string): string {
-  return `${baseUrl}/auth/register?sponsor=${memberId}&upline=${memberId}`
-}
-
-export function isValidMemberId(memberId: string): boolean {
-  return /^[A-Z0-9]{6,20}$/.test(memberId)
-}
-
-export function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message
+// Generate PIN code
+export function generatePinCode(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  let result = ""
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
   }
-  return "An unknown error occurred"
+  return result
+}
+
+// Generate tracking number
+export function generateTrackingNumber(): string {
+  const prefix = "TRK"
+  const timestamp = Date.now().toString()
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase()
+  return `${prefix}${timestamp}${random}`
+}
+
+// Validate email
+export function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+// Validate phone number (Nigerian format)
+export function validatePhone(phone: string): boolean {
+  const phoneRegex = /^(\+234|234|0)?[789][01]\d{8}$/
+  return phoneRegex.test(phone.replace(/\s+/g, ""))
+}
+
+// Format currency
+export function formatCurrency(amount: number | string, currency = "NGN"): string {
+  const numAmount = typeof amount === "string" ? Number.parseFloat(amount) : amount
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: currency,
+    minimumFractionDigits: 0,
+  }).format(numAmount)
+}
+
+// Format date
+export function formatDate(date: Date | string): string {
+  const dateObj = typeof date === "string" ? new Date(date) : date
+  return dateObj.toLocaleDateString("en-NG", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+}
+
+// Format date and time
+export function formatDateTime(date: Date | string): string {
+  const dateObj = typeof date === "string" ? new Date(date) : date
+  return dateObj.toLocaleString("en-NG", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
+// Calculate commission based on level
+export function calculateCommission(amount: number, level: number): number {
+  const commissionRates = {
+    1: 0.1, // 10% for level 1
+    2: 0.05, // 5% for level 2
+    3: 0.03, // 3% for level 3
+    4: 0.02, // 2% for level 4
+    5: 0.01, // 1% for level 5
+    6: 0.005, // 0.5% for level 6
+  }
+
+  const rate = commissionRates[level as keyof typeof commissionRates] || 0
+  return amount * rate
+}
+
+// Generate referral link
+export function generateReferralLink(memberId: string, baseUrl = ""): string {
+  const url = baseUrl || (typeof window !== "undefined" ? window.location.origin : "")
+  return `${url}/auth/register?ref=${memberId}`
+}
+
+// Truncate text
+export function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text
+  return text.substring(0, maxLength) + "..."
+}
+
+// Generate random string
+export function generateRandomString(length: number): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+  let result = ""
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return result
+}
+
+// Sleep function for delays
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+// Check if string is valid JSON
+export function isValidJSON(str: string): boolean {
+  try {
+    JSON.parse(str)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Get initials from name
+export function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .substring(0, 2)
+}
+
+// Capitalize first letter
+export function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+}
+
+// Convert string to slug
+export function slugify(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/[^\w ]+/g, "")
+    .replace(/ +/g, "-")
+}
+
+// Deep clone object
+export function deepClone<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj))
+}
+
+// Check if object is empty
+export function isEmpty(obj: any): boolean {
+  if (obj == null) return true
+  if (Array.isArray(obj) || typeof obj === "string") return obj.length === 0
+  return Object.keys(obj).length === 0
+}
+
+// Debounce function
+export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+  let timeout: NodeJS.Timeout
+  return ((...args: any[]) => {
+    clearTimeout(timeout)
+    timeout = setTimeout(() => func.apply(this, args), wait)
+  }) as T
+}
+
+// Throttle function
+export function throttle<T extends (...args: any[]) => any>(func: T, limit: number): T {
+  let inThrottle: boolean
+  return ((...args: any[]) => {
+    if (!inThrottle) {
+      func.apply(this, args)
+      inThrottle = true
+      setTimeout(() => (inThrottle = false), limit)
+    }
+  }) as T
 }

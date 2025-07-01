@@ -1,66 +1,41 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
-
 import { useRouter } from "next/navigation"
 
 const RegisterPage = () => {
   const router = useRouter()
-
   const [formData, setFormData] = useState({
     fullName: "",
-
     email: "",
-
     phone: "",
-
     password: "",
-
     confirmPassword: "",
-
     sponsorId: "",
-
     uplineId: "",
-
     pin: "",
-
     location: "",
-
     packageType: "starter",
-
     agreeTerms: false,
   })
 
   const [loading, setLoading] = useState(false)
-
   const [message, setMessage] = useState({ text: "", type: "" })
-
   const [showPassword, setShowPassword] = useState(false)
-
   const [pinMethod, setPinMethod] = useState<"existing" | "new">("existing")
 
   // Single package configuration
-
   const PACKAGE = {
     name: "Bright Orion Starter Package",
-
     price: 36000,
-
     currency: "NGN",
-
     features: [
       "Access to 6-Level Matrix System",
-
       "Commission on All Levels",
-
       "Mobile App Access",
-
       "Email & Phone Support",
-
       "Training Materials",
-
       "Referral Link Generation",
     ],
   }
@@ -68,21 +43,16 @@ const RegisterPage = () => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-NG", {
       style: "currency",
-
       currency: "NGN",
-
       minimumFractionDigits: 0,
     }).format(amount)
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
-
     const checked = type === "checkbox" ? (e.target as HTMLInputElement).checked : undefined
-
     setFormData({
       ...formData,
-
       [name]: type === "checkbox" ? checked : value,
     })
   }
@@ -90,67 +60,56 @@ const RegisterPage = () => {
   const validateForm = () => {
     if (!formData.fullName.trim()) {
       setMessage({ text: "Full name is required.", type: "error" })
-
       return false
     }
 
     if (!formData.email.trim()) {
       setMessage({ text: "Email address is required.", type: "error" })
-
       return false
     }
 
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
       setMessage({ text: "Please enter a valid email address.", type: "error" })
-
       return false
     }
 
     if (!formData.phone.trim()) {
       setMessage({ text: "Phone number is required.", type: "error" })
-
       return false
     }
 
     if (!formData.password) {
       setMessage({ text: "Password is required.", type: "error" })
-
       return false
     }
 
     if (formData.password.length < 6) {
       setMessage({ text: "Password must be at least 6 characters.", type: "error" })
-
       return false
     }
 
     if (formData.password !== formData.confirmPassword) {
       setMessage({ text: "Passwords do not match.", type: "error" })
-
       return false
     }
 
     if (!formData.sponsorId.trim()) {
       setMessage({ text: "Sponsor ID is required.", type: "error" })
-
       return false
     }
 
     if (!formData.uplineId.trim()) {
       setMessage({ text: "Upline ID is required.", type: "error" })
-
       return false
     }
 
     if (!formData.agreeTerms) {
       setMessage({ text: "You must agree to the terms and conditions.", type: "error" })
-
       return false
     }
 
     if (pinMethod === "existing" && !formData.pin) {
       setMessage({ text: "Registration PIN is required.", type: "error" })
-
       return false
     }
 
@@ -159,31 +118,24 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
     setLoading(true)
-
     setMessage({ text: "", type: "" })
 
     if (!validateForm()) {
       setLoading(false)
-
       return
     }
 
     try {
       const submissionData = {
         ...formData,
-
         pinMethod,
-
         packagePrice: PACKAGE.price,
       }
 
       const response = await fetch("/api/auth/register", {
         method: "POST",
-
         headers: { "Content-Type": "application/json" },
-
         body: JSON.stringify(submissionData),
       })
 
@@ -191,17 +143,12 @@ const RegisterPage = () => {
 
       if (response.ok && result.success) {
         setMessage({ text: result.message, type: "success" })
-
         // Store user data for payment
-
         if (result.user) {
           localStorage.setItem("pending_user", JSON.stringify(result.user))
-
           localStorage.setItem("package_info", JSON.stringify(PACKAGE))
         }
-
         // Redirect to payment page
-
         setTimeout(() => {
           router.push("/payment")
         }, 2000)
@@ -220,18 +167,14 @@ const RegisterPage = () => {
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-2xl animate-fade-in">
         <div className="text-center mb-6">
           <h2 className="text-3xl font-bold text-[#0066E0] mb-2">Create Your Bright Orion Account</h2>
-
           <p className="text-gray-600">Join our growing community today</p>
         </div>
 
         {/* Package Information Card */}
-
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-6">
           <div className="text-center">
             <h3 className="text-xl font-bold text-[#0066E0] mb-2">{PACKAGE.name}</h3>
-
             <div className="text-3xl font-bold text-[#0066E0] mb-4">{formatCurrency(PACKAGE.price)}</div>
-
             <div className="grid grid-cols-2 gap-2 text-sm">
               {PACKAGE.features.map((feature, index) => (
                 <div key={index} className="flex items-center text-gray-700">
@@ -242,7 +185,6 @@ const RegisterPage = () => {
                       clipRule="evenodd"
                     />
                   </svg>
-
                   {feature}
                 </div>
               ))}
@@ -256,7 +198,6 @@ const RegisterPage = () => {
               <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
                 Full Name *
               </label>
-
               <input
                 type="text"
                 id="fullName"
@@ -273,7 +214,6 @@ const RegisterPage = () => {
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 Email Address *
               </label>
-
               <input
                 type="email"
                 id="email"
@@ -290,7 +230,6 @@ const RegisterPage = () => {
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
                 Phone Number *
               </label>
-
               <input
                 type="tel"
                 id="phone"
@@ -307,7 +246,6 @@ const RegisterPage = () => {
               <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
                 Location
               </label>
-
               <input
                 type="text"
                 id="location"
@@ -323,7 +261,6 @@ const RegisterPage = () => {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Password *
               </label>
-
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -335,7 +272,6 @@ const RegisterPage = () => {
                   onChange={handleChange}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0066E0] pr-10"
                 />
-
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -350,7 +286,6 @@ const RegisterPage = () => {
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
                 Confirm Password *
               </label>
-
               <input
                 type="password"
                 id="confirmPassword"
@@ -367,7 +302,6 @@ const RegisterPage = () => {
               <label htmlFor="sponsorId" className="block text-sm font-medium text-gray-700 mb-1">
                 Sponsor ID *
               </label>
-
               <input
                 type="text"
                 id="sponsorId"
@@ -384,7 +318,6 @@ const RegisterPage = () => {
               <label htmlFor="uplineId" className="block text-sm font-medium text-gray-700 mb-1">
                 Upline ID *
               </label>
-
               <input
                 type="text"
                 id="uplineId"
@@ -399,10 +332,8 @@ const RegisterPage = () => {
           </div>
 
           {/* PIN Section */}
-
           <div className="space-y-3">
             <label className="block text-sm font-medium text-gray-700">Registration PIN *</label>
-
             <div className="flex space-x-4 mb-3">
               <button
                 type="button"
@@ -413,7 +344,6 @@ const RegisterPage = () => {
               >
                 I have a PIN
               </button>
-
               <button
                 type="button"
                 onClick={() => setPinMethod("new")}
@@ -446,12 +376,10 @@ const RegisterPage = () => {
                       clipRule="evenodd"
                     />
                   </svg>
-
                   <div className="text-sm text-blue-800">
                     <p className="font-medium">
                       {"You'll receive your PIN after completing registration and payment."}
                     </p>
-
                     <p className="mt-1">PIN will be sent to your email and phone number within 24 hours.</p>
                   </div>
                 </div>
@@ -460,7 +388,6 @@ const RegisterPage = () => {
           </div>
 
           {/* Terms and Conditions */}
-
           <div className="flex items-start">
             <div className="flex items-center h-5">
               <input
@@ -473,7 +400,6 @@ const RegisterPage = () => {
                 className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300"
               />
             </div>
-
             <label htmlFor="agreeTerms" className="ml-2 text-sm text-gray-700">
               I agree to the{" "}
               <a href="/terms" className="text-[#0066E0] hover:underline">
@@ -488,7 +414,6 @@ const RegisterPage = () => {
           </div>
 
           {/* Submit Button */}
-
           <button
             type="submit"
             disabled={loading}
@@ -503,7 +428,6 @@ const RegisterPage = () => {
                   viewBox="0 0 24 24"
                 >
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-
                   <path
                     className="opacity-75"
                     fill="currentColor"
@@ -544,7 +468,6 @@ const RegisterPage = () => {
                   />
                 </svg>
               )}
-
               {message.text}
             </div>
           </div>
