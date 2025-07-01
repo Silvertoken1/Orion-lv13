@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import Image from "next/image"
 import { Users, TrendingUp, Shield, Award, Star, CheckCircle, ArrowRight, Play } from "lucide-react"
 
 export default function HomePage() {
@@ -48,7 +47,7 @@ export default function HomePage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-2 border-[#0066E0] text-[#0066E0] hover:bg-[#0066E0] hover:text-white px-8 py-4 text-lg"
+                  className="border-2 border-[#0066E0] text-[#0066E0] hover:bg-[#0066E0] hover:text-white px-8 py-4 text-lg bg-transparent"
                   asChild
                 >
                   <Link href="/about">
@@ -80,34 +79,47 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right Content - Hero Image */}
+            {/* Right Content - Hero Image - Fixed for Mobile */}
             <div className="relative">
               <div className="relative w-full h-64 md:h-80 lg:h-96 rounded-2xl overflow-hidden shadow-2xl">
-                <Image
-                  src="/placeholder.svg?height=400&width=600"
-                  alt="Bright Orion Success Story"
-                  fill
-                  className="object-cover"
-                  priority
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                {/* Mobile-optimized image with fallback */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-blue-200 to-blue-300">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center p-6">
+                      <div className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-4 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center shadow-lg">
+                        <span className="text-white font-bold text-xl md:text-2xl">BO</span>
+                      </div>
+                      <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-2">Bright Orion</h3>
+                      <p className="text-sm md:text-base text-gray-600">MLM Success Platform</p>
+                      <div className="mt-4 flex justify-center space-x-2">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-75"></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse delay-150"></div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Overlay pattern for visual appeal */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
+                  <div className="absolute top-4 right-4 w-16 h-16 bg-white/20 rounded-full blur-xl"></div>
+                  <div className="absolute bottom-8 left-8 w-12 h-12 bg-white/15 rounded-full blur-lg"></div>
+                </div>
               </div>
 
-              {/* Floating Cards */}
-              <div className="absolute -top-4 -left-4 bg-white p-4 rounded-xl shadow-lg border">
+              {/* Floating Cards - Responsive */}
+              <div className="absolute -top-2 -left-2 md:-top-4 md:-left-4 bg-white p-3 md:p-4 rounded-xl shadow-lg border">
                 <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium">Live Earnings</span>
+                  <div className="w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs md:text-sm font-medium">Live Earnings</span>
                 </div>
-                <p className="text-lg font-bold text-green-600">₦2,450,000</p>
+                <p className="text-sm md:text-lg font-bold text-green-600">₦2,450,000</p>
               </div>
 
-              <div className="absolute -bottom-4 -right-4 bg-white p-4 rounded-xl shadow-lg border">
+              <div className="absolute -bottom-2 -right-2 md:-bottom-4 md:-right-4 bg-white p-3 md:p-4 rounded-xl shadow-lg border">
                 <div className="flex items-center space-x-2">
-                  <Users className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium">New Members</span>
+                  <Users className="w-3 h-3 md:w-4 md:h-4 text-blue-600" />
+                  <span className="text-xs md:text-sm font-medium">New Members</span>
                 </div>
-                <p className="text-lg font-bold text-blue-600">+127 Today</p>
+                <p className="text-sm md:text-lg font-bold text-blue-600">+127 Today</p>
               </div>
             </div>
           </div>
@@ -218,7 +230,7 @@ export default function HomePage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-2 border-white text-white hover:bg-white hover:text-[#0066E0] px-8 py-4 text-lg"
+                className="border-2 border-white text-white hover:bg-white hover:text-[#0066E0] px-8 py-4 text-lg bg-transparent"
                 asChild
               >
                 <Link href="/contact">Contact Support</Link>
