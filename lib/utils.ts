@@ -6,22 +6,15 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function generateMemberId(): string {
+  const prefix = "BO"
   const timestamp = Date.now().toString().slice(-6)
   const random = Math.floor(Math.random() * 1000)
     .toString()
     .padStart(3, "0")
-  return `BO${timestamp}${random}`
+  return `${prefix}${timestamp}${random}`
 }
 
-export function generateTrackingNumber(): string {
-  const timestamp = Date.now().toString()
-  const random = Math.floor(Math.random() * 10000)
-    .toString()
-    .padStart(4, "0")
-  return `TRK${timestamp}${random}`
-}
-
-export function generateActivationPin(): string {
+export function generatePinCode(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
   let result = ""
   for (let i = 0; i < 8; i++) {
@@ -30,29 +23,13 @@ export function generateActivationPin(): string {
   return result
 }
 
-export function formatCurrency(amount: number | string): string {
-  const num = typeof amount === "string" ? Number.parseFloat(amount) : amount
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-  }).format(num)
-}
-
-export function formatDate(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(d)
-}
-
-export function calculateCommission(amount: number, level: number): number {
-  const commissionRates = [0.3, 0.1, 0.05, 0.03, 0.02, 0.01] // 30%, 10%, 5%, 3%, 2%, 1%
-  const rate = commissionRates[level - 1] || 0
-  return amount * rate
+export function generateTrackingNumber(): string {
+  const prefix = "TRK"
+  const timestamp = Date.now().toString()
+  const random = Math.floor(Math.random() * 10000)
+    .toString()
+    .padStart(4, "0")
+  return `${prefix}${timestamp}${random}`
 }
 
 export function validateEmail(email: string): boolean {
@@ -61,12 +38,36 @@ export function validateEmail(email: string): boolean {
 }
 
 export function validatePhone(phone: string): boolean {
-  const phoneRegex = /^(\+234|0)[789][01]\d{8}$/
-  return phoneRegex.test(phone)
+  const phoneRegex = /^(\+234|234|0)[789][01]\d{8}$/
+  return phoneRegex.test(phone.replace(/\s+/g, ""))
 }
 
-export function generateReference(): string {
-  const timestamp = Date.now()
-  const random = Math.floor(Math.random() * 10000)
-  return `BO_${timestamp}_${random}`
+export function formatCurrency(amount: number | string): string {
+  const num = typeof amount === "string" ? Number.parseFloat(amount) : amount
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    minimumFractionDigits: 0,
+  }).format(num)
+}
+
+export function formatDate(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date
+  return d.toLocaleDateString("en-NG", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+}
+
+export function calculateCommission(level: number, amount = 36000): number {
+  const commissionRates = {
+    1: 4000,
+    2: 2000,
+    3: 2000,
+    4: 1500,
+    5: 1500,
+    6: 1500,
+  }
+  return commissionRates[level as keyof typeof commissionRates] || 0
 }
